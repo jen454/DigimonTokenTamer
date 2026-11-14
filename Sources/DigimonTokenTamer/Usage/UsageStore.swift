@@ -646,6 +646,13 @@ final class UsageStore {
         return .blazing
     }
 
+    /// Usage cannot be refreshed: the last fully successful refresh is too old (`isStale`), or the
+    /// very first one already failed. The partner falls asleep while this holds.
+    var isRefreshFailing: Bool {
+        if lastUpdated == nil { return lastErrorDescription != nil }
+        return isStale
+    }
+
     var isStale: Bool {
         guard let lastUpdated else { return true }
         let allowance = refreshInterval > 0 ? refreshInterval * 2 : 1800

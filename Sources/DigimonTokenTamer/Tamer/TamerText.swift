@@ -161,6 +161,11 @@ struct TamerText {
         }
     }
     var followPartner: String { s("지금 파트너 따라가기", "Follow current partner") }
+    var pickFromNotebook: String { s("노트북에서 선택…", "Choose in Notebook…") }
+    var pickMenuBarForm: String { s("메뉴바 형태 고르기", "Choose menu bar form") }
+    var pickBanner: String { s("메뉴바에 띄울 형태를 눌러 주세요", "Click the form to show in the menu bar") }
+    var pickHint: String { s("등록된 형태만 고를 수 있어요. 보이는 모습만 바뀌고 육성은 그대로예요.", "Only registered forms can be chosen. Only the look changes; growth stays the same.") }
+    var cancel: String { s("취소", "Cancel") }
     var unknownForm: String { "???" }
 
     // MARK: Scenes
@@ -204,7 +209,7 @@ struct TamerText {
 
     // MARK: Settings
     var displayFormTitle: String { s("메뉴바 표시 형태", "Menu bar form") }
-    var displayFormHint: String { s("노트북에 등록된 형태 중에서 골라요. 보이는 모습만 바뀌고 육성은 그대로예요.", "Pick any registered form. Only the look changes; growth stays the same.") }
+    var displayFormHint: String { s("노트북에서 선택하면 노트북이 열려요. 등록된 형태를 누르면 메뉴바에 띄워요. 보이는 모습만 바뀌고 육성은 그대로예요.", "Pick any registered form. Only the look changes; growth stays the same.") }
     var spritePackTitle: String { s("스프라이트 팩", "Sprite pack") }
     func spritePackStatus(_ found: Int, _ total: Int) -> String { s("이미지 \(found) / \(total)개 찾음", "\(found) / \(total) images found") }
     var spritePackMissing: String {

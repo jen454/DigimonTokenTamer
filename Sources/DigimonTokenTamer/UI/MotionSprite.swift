@@ -17,11 +17,13 @@ struct MotionSprite: View {
     var walkRange: Int = 8
     /// Shows one fixed frame instead of playing (previews).
     var stillFrame: MotionFrame? = nil
+    /// Draw the "!" of the ready motion. The card has its own clickable "!" and turns this off.
+    var showsBadge = true
 
     @State private var frame = MotionFrame(duration: 0)
 
     init(path: String, scale: CGFloat, mood: PartnerMood, action: PartnerAction? = nil, actionID: Int = 0,
-         actionAt: Date? = nil, walkRange: Int = 8, stillFrame: MotionFrame? = nil) {
+         actionAt: Date? = nil, walkRange: Int = 8, stillFrame: MotionFrame? = nil, showsBadge: Bool = true) {
         self.path = path
         self.scale = scale
         self.mood = mood
@@ -30,7 +32,9 @@ struct MotionSprite: View {
         self.actionAt = actionAt
         self.walkRange = walkRange
         self.stillFrame = stillFrame
-        _frame = State(initialValue: stillFrame ?? MotionFrame(duration: 0))
+        self.showsBadge = showsBadge
+        // Start on the loop's first frame, so the "!" (or Z, anger) is there from the first paint.
+        _frame = State(initialValue: stillFrame ?? MotionScript.loop(mood, walkRange: walkRange).first ?? MotionFrame(duration: 0))
     }
 
     var body: some View {
@@ -41,7 +45,9 @@ struct MotionSprite: View {
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     ForEach(Array(frame.overlays.enumerated()), id: \.offset) { _, overlay in
-                        overlayView(overlay).offset(position(of: overlay, in: size))
+                        if showsBadge || overlay.item != .icon(.exclamation) {
+                            overlayView(overlay).offset(position(of: overlay, in: size))
+                        }
                     }
                 }
             }

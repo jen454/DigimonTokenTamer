@@ -69,6 +69,21 @@ final class TamerStore {
         actionID += 1
     }
 
+    /// Petting: hearts — unless it comes too often, then the partner gets annoyed.
+    static let petLimit = 5
+    static let petWindow: TimeInterval = 6
+    @ObservationIgnored private var petTimes: [Date] = []
+
+    func pet(now: Date = Date()) {
+        petTimes = petTimes.filter { now.timeIntervalSince($0) < Self.petWindow } + [now]
+        if petTimes.count >= Self.petLimit {
+            petTimes.removeAll()
+            perform(.annoyed)
+        } else {
+            perform(.pet)
+        }
+    }
+
     /// Posts a user notification (title, body). Wired by `AppDelegate`; nil in tests.
     @ObservationIgnored var onNotify: ((String, String) -> Void)?
 

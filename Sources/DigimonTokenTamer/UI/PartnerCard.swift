@@ -82,13 +82,13 @@ private struct PartnerCardContent: View {
             MotionSprite(path: spritePath, scale: scale,
                          mood: PartnerMood.current(usage: usage, tamer: tamer),
                          action: tamer.action, actionID: tamer.actionID, actionAt: tamer.actionAt,
-                         walkRange: walkRange)
+                         walkRange: walkRange, showsBadge: false)
                 .padding(.bottom, 8)
         }
         .frame(width: Self.stageSide, height: Self.stageSide)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .contentShape(Rectangle())
-        .onTapGesture { if !partner.isEgg { tamer.perform(.pet) } }
+        .onTapGesture { if !partner.isEgg { tamer.pet() } }
         .help(partner.isEgg ? "" : t.petHelp)
         .overlay(alignment: .topTrailing) {
             if tamer.canEvolve {

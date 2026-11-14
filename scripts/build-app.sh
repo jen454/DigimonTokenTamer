@@ -22,11 +22,13 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/DigimonTokenTamer" "$APP/Contents/MacOS/DigimonTokenTamer"
 # Drop local symbols that can embed the builder's home directory.
 strip -S -x "$APP/Contents/MacOS/DigimonTokenTamer"
-# Guard: no artwork may enter the bundle (docs/DESIGN.md §5.2).
+# Guard: no sprite artwork may enter the bundle (docs/DESIGN.md §5.2). The app icon (.icns,
+# scripts/make-app-icon.sh) is the one image the app carries.
 if find "$APP/Contents/Resources" \( -name '*.png' -o -name '*.gif' -o -name '*.svg' -o -name '*.webp' \) | grep -q .; then
   echo "Refusing to build: image files found in the app bundle." >&2
   exit 1
 fi
+cp Sources/DigimonTokenTamer/Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp LICENSE NOTICE.md "$APP/Contents/Resources/"
 # Guard: the binary must not carry the builder's local paths (home folder / user name).
 if strings "$APP/Contents/MacOS/DigimonTokenTamer" | grep -q "$HOME"; then
@@ -41,6 +43,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>DigimonTokenTamer</string>
 <key>CFBundleDisplayName</key><string>디지몬 토큰 테이머</string>
 <key>CFBundleExecutable</key><string>DigimonTokenTamer</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>

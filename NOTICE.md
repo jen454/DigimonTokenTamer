@@ -35,4 +35,11 @@ separate repository [DigimonTokenTamer-sprites](https://github.com/jen454/Digimo
 into its cache folder. Rights holders can request removal through this repository's issues.
 The MIT license of the source code grants no rights to that material.
 
+**App icon.** The app icon (`Sources/DigimonTokenTamer/Resources/AppIcon.icns`,
+`docs/images/app-icon.png`, drawn by `tools/app_icon.py`) is fan art based on the Digivice
+design from Digimon Adventure, with this project's digitama on its screen. It is the one
+Digimon-derived image this repository and the app contain, because macOS reads the icon from the
+app bundle. The Digivice design belongs to its rights holders; rights holders can request its
+removal through this repository's issues.
+
 비공식 팬 프로젝트이며 Bandai/Toei와 관련이 없습니다. 디지몬 관련 권리는 각 소유자에게 있습니다.

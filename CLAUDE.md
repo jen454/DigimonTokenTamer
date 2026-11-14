@@ -11,6 +11,10 @@ AI 코딩 도구의 토큰 사용량으로 디지몬 어드벤처 파트너 8계
   - 이름은 "태그"가 아니라 "펜던트"
 - **에셋**: `./tools/build_assets.sh`로 `assets/`를 다시 만든다. `assets/`는 git에 넣지 않는다.
   - Wikimon 도트, 공식 문장, 원작 디지타마 무늬 같은 저작권 에셋은 절대 커밋하지 않는다.
+  - 예외는 앱 아이콘 하나다 (D1+ 디지바이스형, 2026-11-14 사용자가 결정).
+    - 아이콘은 앱 안에 있어야 하므로 `AppIcon.icns`와 `docs/images/app-icon.png`를 커밋한다.
+    - NOTICE에 팬아트임을 밝혀 두었다.
+    - `./scripts/make-app-icon.sh`로 다시 만든다.
 - **Wikimon 접근 예절**: UA `DigiTokenBar-research/0.1`을 쓰고 요청 사이에 3~5초를 쉰다. 앱에서 직접 링크해 쓰지 않는다.
 - **스프라이트 규칙**: 원래 픽셀 크기, 모두 오른쪽을 봄, 보간 없이(nearest-neighbor) 렌더링한다.
 - **작업 기록**: `presentation/log.md`에 단계별로 남긴다. 형식은 "뭘 시켰나 / 뭐가 나왔나 / 내가 뭘 고쳤나"이다.

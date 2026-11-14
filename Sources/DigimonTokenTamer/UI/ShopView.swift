@@ -14,7 +14,7 @@ struct ShopView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 TamerSectionHeading(title: t.wallet)
-                Text(MillionFormat.string(tamer.wallet) + " tokens")
+                Text(MillionFormat.string(tamer.wallet))
                     .font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
                 Text(t.walletHint).font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
             }

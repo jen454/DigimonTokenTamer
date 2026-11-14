@@ -69,6 +69,17 @@ enum PreviewRenderer {
         menuBar("menubar-rookie")
         tamer.buy(.digivice)
         shot("03-rookie-ready") { PartnerCard() }
+        shot("14b-pet-ready", width: 340) {
+            HStack(alignment: .bottom, spacing: 30) {
+                MotionSprite(path: "png/agumon/2_rookie_agumon.png", scale: 2, mood: .ready,
+                             stillFrame: MotionScript.loop(.ready)[0])
+                MotionSprite(path: "png/agumon/2_rookie_agumon.png", scale: 2, mood: .ready,
+                             stillFrame: MotionScript.loop(.ready)[1])
+                MotionSprite(path: "png/agumon/5_mega_wargreymon.png", scale: 2, mood: .ready,
+                             stillFrame: MotionScript.loop(.ready)[8])
+            }
+            .padding(.top, 30)
+        }
         menuBar("menubar-ready")
         tamer.evolve()
         fill(day(2))
@@ -102,6 +113,9 @@ enum PreviewRenderer {
             try? png.write(to: directory.appendingPathComponent(name + ".png"))
         }
         popover("20-popover-notebook", .notebook)
+        nav.openDisplayFormPicker(fromSettings: true)
+        popover("22-popover-notebook-pick", .notebook)
+        nav.reset()
         popover("21-popover-partner", .partner)
         shot("13-difficulty") { DifficultySection(tamer: tamer) }
         shot("15-motions") {
@@ -110,7 +124,8 @@ enum PreviewRenderer {
                 MotionSprite(path: path, scale: 2, mood: .idle, stillFrame: MotionScript.once(.pet)[5])
                 MotionSprite(path: path, scale: 2, mood: .idle, stillFrame: MotionScript.once(.eat)[2])
                 MotionSprite(path: path, scale: 2, mood: .sleeping, stillFrame: MotionScript.loop(.sleeping)[2])
-                MotionSprite(path: path, scale: 2, mood: .sulking, stillFrame: MotionScript.loop(.sulking)[0])
+                MotionSprite(path: path, scale: 2, mood: .walking, stillFrame: MotionScript.once(.annoyed)[0])
+                MotionSprite(path: path, scale: 2, mood: .ready, stillFrame: MotionScript.loop(.ready)[3])
             }
             .padding(.top, 30).padding(.horizontal, 10)
         }

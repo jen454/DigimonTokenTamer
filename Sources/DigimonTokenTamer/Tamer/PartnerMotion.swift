@@ -1,20 +1,22 @@
 import Foundation
 
-/// What the partner is doing on its own, from usage (DigiMonTokenBar `computeState`):
-/// a limit near its end → sulking, no usage today → asleep, tokens flowing → walking.
+/// What the partner is doing on its own (user rules, 2026-11-14):
+/// evolution possible → jumping with "!", usage cannot be refreshed → asleep, otherwise walking
+/// (a little faster while many tokens are flowing). `idle` is only the analyzer's still pose.
 enum PartnerMood: String, Equatable, Sendable {
-    case egg, idle, working, busy, sleeping, sulking
+    case egg, idle, walking, busy, sleeping
+    /// Every evolution condition is met: jump with the "!". Wins over everything else.
+    case ready
 
     @MainActor
     static func current(usage: UsageStore, tamer: TamerStore) -> PartnerMood {
         guard let partner = tamer.active else { return .idle }
         if partner.isEgg { return .egg }
-        if usage.isLimitWarning { return .sulking }
-        if !usage.hasUsageData || usage.todayTotalTokens == 0 { return .sleeping }
+        if tamer.canEvolve { return .ready }
+        if usage.isRefreshFailing { return .sleeping }
         switch usage.burnTier {
-        case .idle: return .idle
-        case .normal: return .working
         case .fast, .blazing: return .busy
+        case .idle, .normal: return .walking
         }
     }
 }
@@ -22,6 +24,7 @@ enum PartnerMood: String, Equatable, Sendable {
 /// One-shot motions started by the user or by an event (motion lab names in parentheses).
 enum PartnerAction: Equatable, Sendable {
     case pet     // 쓰다듬기: hearts rise
+    case annoyed // 짜증: petted too often — anger mark, shaking
     case eat     // 먹기: bites into a piece of meat
     case happy   // 기쁨: hops with notes
 }
@@ -69,7 +72,7 @@ enum MotionScript {
                 }
             }
             return frames
-        case .working, .busy:
+        case .walking, .busy:
             let step = mood == .busy ? 0.1 : 0.16
             var frames: [MotionFrame] = []
             var x = 0, dir = 1
@@ -86,19 +89,27 @@ enum MotionScript {
                 if k % 4 > 1 { overlays.append(MotionOverlay(item: .icon(.sleep), horizontal: .right, vertical: .top, ox: 4 + k % 2, oy: -9)) }
                 return MotionFrame(duration: 0.55, dim: true, overlays: overlays)
             }
-        case .sulking:
-            let anger = MotionOverlay(item: .icon(.anger), horizontal: .right, vertical: .top, ox: -3, oy: -2)
-            var frames = (0..<12).map { k in
-                MotionFrame(duration: 0.08, dx: k % 2 == 1 ? 1 : -1, overlays: k % 4 < 2 ? [anger] : [])
-            }
-            frames.append(MotionFrame(duration: 0.7, overlays: [anger]))
-            frames += [MotionFrame(duration: 0.8, flip: true), MotionFrame(duration: 0.8, dy: -1, flip: true)]
+        case .ready:
+            // Jumping with the "!" riding on the top-right corner (it moves with the sprite).
+            let badge = MotionOverlay(item: .icon(.exclamation), horizontal: .right, vertical: .top, ox: 1, oy: -5)
+            var frames = [0, -3, -5, -6, -5, -3, 0].map { MotionFrame(duration: 0.07, dy: $0, overlays: [badge]) }
+            frames += [MotionFrame(duration: 0.35, overlays: [badge]), MotionFrame(duration: 0.25, dy: -1, overlays: [badge]),
+                       MotionFrame(duration: 0.25, overlays: [badge])]
             return frames
         }
     }
 
     static func once(_ action: PartnerAction) -> [MotionFrame] {
         switch action {
+        case .annoyed:
+            // Motion lab `sulk`: shakes with the anger mark, then turns away for a moment.
+            let anger = MotionOverlay(item: .icon(.anger), horizontal: .right, vertical: .top, ox: -3, oy: -2)
+            var frames = (0..<12).map { k in
+                MotionFrame(duration: 0.08, dx: k % 2 == 1 ? 1 : -1, overlays: k % 4 < 2 ? [anger] : [])
+            }
+            frames += [MotionFrame(duration: 0.7, overlays: [anger]),
+                       MotionFrame(duration: 0.6, flip: true, overlays: [anger]), MotionFrame(duration: 0.6, flip: true)]
+            return frames
         case .pet:
             var frames = (0..<9).map { k in
                 MotionFrame(duration: 0.13, dy: k % 2 == 1 ? -1 : 0,

@@ -18,12 +18,33 @@ final class PopoverNavigation {
     var claudeAccountID: String?
     /// The notebook form open in the 아날라이저 (detail page); nil shows the notebook grid.
     var analyzerForm: FormRef?
+    /// The notebook is choosing the menu bar form: a click selects instead of opening the analyzer.
+    var pickingDisplayForm = false
+    /// Go back to Settings after the choice (the picker was opened from there).
+    var returnToSettingsAfterPick = false
 
     func reset() {
         showSettings = false
         expandAdvancedOnOpen = false
         analyzerForm = nil
+        pickingDisplayForm = false
+        returnToSettingsAfterPick = false
         tab = .partner
+    }
+
+    /// Settings → 메뉴바 표시 형태 → 노트북에서 선택 (as DigiMonTokenBar's "도감에서 선택").
+    func openDisplayFormPicker(fromSettings: Bool) {
+        showSettings = false
+        analyzerForm = nil
+        tab = .notebook
+        pickingDisplayForm = true
+        returnToSettingsAfterPick = fromSettings
+    }
+
+    func finishDisplayFormPick() {
+        pickingDisplayForm = false
+        if returnToSettingsAfterPick { showSettings = true }
+        returnToSettingsAfterPick = false
     }
 
     func openSessionKeySettings() {
@@ -133,7 +154,7 @@ struct PopoverView: View {
             HStack(spacing: 4) {
                 ForEach(PopoverTab.allCases, id: \.self) { tab in
                     let selected = nav.tab == tab
-                    Button { nav.tab = tab; nav.analyzerForm = nil } label: {
+                    Button { nav.tab = tab; nav.analyzerForm = nil; nav.pickingDisplayForm = false } label: {
                         Text(title(tab))
                             .font(.system(size: 12))
                             .padding(.horizontal, 9).padding(.vertical, 5)

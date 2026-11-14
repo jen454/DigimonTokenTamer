@@ -31,8 +31,8 @@ enum MenuBarArt {
     }
 
     /// The looping frames for one subject. `ready` adds the bobbing "!" badge and wins over the
-    /// mood; otherwise the mood shows (motion lab): asleep → dimmed with a Z, sulking → anger
-    /// mark, coding → a quicker bob.
+    /// mood; otherwise the mood shows (motion lab): asleep (usage cannot refresh) → dimmed with
+    /// a Z, walking → bob while turning, quicker while many tokens flow.
     static func loop(sprite: SpritePack.Sprite?, isEgg: Bool, ready: Bool, mood: PartnerMood = .idle) -> [Frame] {
         guard let sprite else { return placeholder(isEgg: isEgg) }
         if ready {
@@ -50,12 +50,7 @@ enum MenuBarArt {
                 render(sprite, up: false, flip: false, badgeBob: nil, overlay: nil, delay: 0.7,
                        mark: k % 2 == 0 ? .sleep : nil, markLift: k % 4 == 0 ? 0 : 2, dim: true)
             }
-        case .sulking:
-            return (0..<4).compactMap { k in
-                render(sprite, up: k == 1, flip: k >= 2, badgeBob: nil, overlay: nil, delay: 0.4,
-                       mark: k % 2 == 0 ? .anger : nil)
-            }
-        case .working, .busy:
+        case .walking, .busy:
             let delay = mood == .busy ? 0.2 : 0.3
             var frames: [Frame] = []
             for flip in [false, true] {
@@ -64,7 +59,7 @@ enum MenuBarArt {
                 }
             }
             return frames
-        case .idle, .egg:
+        case .idle, .egg, .ready:
             // Idle: three bobs facing right, three facing left (motion lab `idle`).
             var frames: [Frame] = []
             for flip in [false, true] {

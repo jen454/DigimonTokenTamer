@@ -70,7 +70,7 @@ final class FloatingPetController: NSObject, NSWindowDelegate {
             FloatingPetView().environment(store).environment(tamer).environment(pack)))
         host.onClick = { [weak self] in
             guard let self, self.tamer.active?.isEgg == false else { return }
-            self.tamer.perform(.pet)
+            self.tamer.pet()
         }
         host.onDoubleClick = { [weak self] in self?.onOpenPopover() }
         host.menuProvider = { [weak self] in self?.contextMenu() }
@@ -83,7 +83,7 @@ final class FloatingPetController: NSObject, NSWindowDelegate {
         let menu = NSMenu()
         menu.addItem(ActionMenuItem(title: t.openPopover) { [weak self] in self?.onOpenPopover() })
         if tamer.active?.isEgg == false {
-            menu.addItem(ActionMenuItem(title: t.petAction) { [weak self] in self?.tamer.perform(.pet) })
+            menu.addItem(ActionMenuItem(title: t.petAction) { [weak self] in self?.tamer.pet() })
         }
         if tamer.state.meat > 0, tamer.active?.isEgg == false {
             menu.addItem(ActionMenuItem(title: t.feedMeat(tamer.state.meat)) { [weak self] in self?.tamer.feedMeat() })
@@ -192,12 +192,6 @@ struct FloatingPetView: View {
                 MotionSprite(path: path, scale: scale, mood: PartnerMood.current(usage: store, tamer: tamer),
                              action: tamer.action, actionID: tamer.actionID, actionAt: tamer.actionAt,
                              walkRange: max(2, Int((room - pixels.width * scale) / 2 / scale) - 2))
-                    .overlay(alignment: .topTrailing) {
-                        if tamer.canEvolve {
-                            PixelIconView(icon: .exclamation, dot: max(2, scale))
-                                .offset(x: 4 * scale, y: -4 * scale)
-                        }
-                    }
                     .padding(.bottom, 4)
             }
         }

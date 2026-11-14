@@ -293,9 +293,17 @@ struct CatalogSourceTests {
 @Suite("Motions")
 struct MotionTests {
     @Test func everyMoodLoopsAndActionsCarryTheirIcons() {
-        for mood in [PartnerMood.egg, .idle, .working, .busy, .sleeping, .sulking] {
+        for mood in [PartnerMood.egg, .idle, .walking, .busy, .sleeping, .ready] {
             #expect(!MotionScript.loop(mood).isEmpty)
         }
+        // The ready loop always carries the "!" and stays in place (no walking away from it).
+        let readyFrames = MotionScript.loop(.ready)
+        let readyAlwaysBadged = readyFrames.allSatisfy { $0.overlays.contains { $0.item == .icon(.exclamation) } }
+        let readyInPlace = readyFrames.allSatisfy { $0.dx == 0 }
+        let readyJumps = readyFrames.contains { $0.dy <= -5 }
+        #expect(readyAlwaysBadged && readyInPlace && readyJumps)
+        let annoyed = MotionScript.once(.annoyed).flatMap(\.overlays).map(\.item)
+        #expect(annoyed.contains(.icon(.anger)))
         let pet = MotionScript.once(.pet).flatMap(\.overlays).map(\.item)
         #expect(pet.contains(.icon(.heart)))
         let eat = MotionScript.once(.eat).flatMap(\.overlays).map(\.item)
@@ -303,8 +311,24 @@ struct MotionTests {
         let sleepingDimmed = MotionScript.loop(.sleeping).allSatisfy(\.dim)
         #expect(sleepingDimmed)
         // The walk stays inside the range it is given.
-        let walkInRange = MotionScript.loop(.working, walkRange: 5).allSatisfy { abs($0.dx) <= 5 }
+        let walkInRange = MotionScript.loop(.walking, walkRange: 5).allSatisfy { abs($0.dx) <= 5 }
         #expect(walkInRange)
+    }
+
+    @Test @MainActor func pettingTooOftenAnnoys() {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tamer-pet-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let store = TamerStore(fileURL: dir.appendingPathComponent("s.json"), defaults: UserDefaults(suiteName: dir.lastPathComponent)!)
+        let start = Date()
+        for i in 0..<(TamerStore.petLimit - 1) {
+            store.pet(now: start.addingTimeInterval(Double(i)))
+            #expect(store.action == .pet)
+        }
+        store.pet(now: start.addingTimeInterval(Double(TamerStore.petLimit - 1)))
+        #expect(store.action == .annoyed)
+        // After a pause, petting is welcome again.
+        store.pet(now: start.addingTimeInterval(60))
+        #expect(store.action == .pet)
     }
 
     @Test @MainActor func feedingAndBuyingStartMotions() {

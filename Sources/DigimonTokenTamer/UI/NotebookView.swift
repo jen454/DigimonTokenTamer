@@ -13,10 +13,28 @@ struct NotebookView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if nav.pickingDisplayForm {
+                // Choosing the menu bar form (from Settings or the button below).
+                HStack(spacing: 8) {
+                    Image(systemName: "menubar.rectangle").foregroundStyle(TamerPalette.orange)
+                    Text(t.pickBanner).font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    if tamer.state.displayForm != nil {
+                        TextLink(title: t.followPartner, size: 11) {
+                            tamer.setDisplayForm(nil)
+                            nav.finishDisplayFormPick()
+                        }
+                    }
+                    TextLink(title: t.cancel, size: 11, tint: TamerPalette.mute) { nav.finishDisplayFormPick() }
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 10).fill(TamerPalette.orange.opacity(0.1)))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(TamerPalette.orange.opacity(0.35)))
+            }
             HStack {
                 TamerSectionHeading(title: t.notebookCount(tamer.state.notebook.count, total))
-                if tamer.state.displayForm != nil {
-                    TextLink(title: t.followPartner, size: 11) { tamer.setDisplayForm(nil) }
+                if !nav.pickingDisplayForm {
+                    TextLink(title: t.pickMenuBarForm, size: 11) { nav.openDisplayFormPicker(fromSettings: false) }
                 }
             }
             VStack(spacing: 0) {
@@ -26,7 +44,7 @@ struct NotebookView: View {
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 4).tamerCard()
-            Text(t.notebookHint).font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
+            Text(nav.pickingDisplayForm ? t.pickHint : t.notebookHint).font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
         }
     }
 
@@ -57,7 +75,12 @@ struct NotebookView: View {
         let isShown = tamer.state.displayForm == form
         return Button {
             guard known else { return }
-            nav.analyzerForm = form
+            if nav.pickingDisplayForm {
+                tamer.setDisplayForm(form)
+                nav.finishDisplayFormPick()
+            } else {
+                nav.analyzerForm = form
+            }
         } label: {
             PixelSprite(path: line.stages[stage].sprite, fit: CGSize(width: 38, height: 34),
                         mode: known ? .normal : .silhouette, placeholder: CGSize(width: 24, height: 24))

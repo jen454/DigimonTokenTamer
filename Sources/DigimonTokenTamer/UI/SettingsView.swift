@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(UsageStore.self) private var store
     @Environment(TamerStore.self) private var tamer
     @Environment(SpritePack.self) private var pack
+    @Environment(PopoverNavigation.self) private var nav
     /// 팝오버 내부 화면 전환 방식 — sheet/dismiss 를 쓰지 않는다 (PopoverView 의 NOTE 참조)
     var onClose: () -> Void
     /// 고급 섹션을 펼친 채로 열지. 세션 키 만료 안내에서 들어온 경우에만 true —
@@ -656,26 +657,29 @@ struct SettingsView: View {
         settingsSection(t.displayFormTitle) {
             groupRow {
                 Text(t.displayFormTitle)
-                Spacer()
-                Picker(t.displayFormTitle, selection: Binding(
-                    get: { tamer.state.displayForm?.key ?? "" },
-                    set: { key in tamer.setDisplayForm(registeredForms.first { $0.key == key }) })) {
-                    Text(t.followPartner).tag("")
-                    ForEach(registeredForms, id: \.key) { form in
-                        Text(formLabel(form)).tag(form.key)
+                    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                // Two choices only; the form itself is picked in the notebook.
+                Menu {
+                    Button {
+                        tamer.setDisplayForm(nil)
+                    } label: {
+                        if tamer.state.displayForm == nil {
+                            Label(t.followPartner, systemImage: "checkmark")
+                        } else {
+                            Text(t.followPartner)
+                        }
                     }
+                    Button(t.pickFromNotebook) { nav.openDisplayFormPicker(fromSettings: true) }
+                } label: {
+                    Text(tamer.state.displayForm.map(formLabel) ?? t.followPartner)
+                        .lineLimit(1).truncationMode(.tail)
                 }
-                .labelsHidden().pickerStyle(.menu).fixedSize()
+                .controlSize(.small)
+                .frame(width: 170, alignment: .trailing)
             }
             Text(t.displayFormHint).font(.caption2).foregroundStyle(TamerPalette.mute)
                 .padding(.horizontal, 12).padding(.bottom, 8)
         }
-    }
-
-    private var registeredForms: [FormRef] {
-        tamer.catalog.lines.flatMap { line in
-            (0..<TamerCatalog.stageCount).map { FormRef(line: line.key, stage: $0) }
-        }.filter { tamer.state.isRegistered($0) }
     }
 
     private func formLabel(_ form: FormRef) -> String {
