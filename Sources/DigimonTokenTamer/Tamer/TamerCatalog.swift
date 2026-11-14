@@ -11,10 +11,37 @@ struct TamerCatalog: Decodable, Sendable {
         let en: String
         let color: String
     }
+    struct Localized: Decodable, Sendable, Equatable {
+        let ko: String
+        let en: String
+        func text(_ lang: AppLanguage) -> String { lang == .ko ? ko : en }
+    }
+    struct LocalizedList: Decodable, Sendable, Equatable {
+        let ko: [String]
+        let en: [String]
+        func list(_ lang: AppLanguage) -> [String] { lang == .ko ? ko : en }
+    }
+    /// Short profile facts shown next to the gauge (as DigiMonTokenBar's home card).
+    /// Absent for the four In-Training I forms its data does not cover.
+    struct Info: Decodable, Sendable, Equatable {
+        let type: Localized
+        let attribute: Localized
+        let moves: LocalizedList
+        /// Official reference page (digimon.net). The app links to it instead of quoting the profile.
+        var source: Localized? = nil
+    }
     struct Stage: Decodable, Sendable, Equatable {
+        /// English name (Vital Bracelet / Japanese romanisation, as the sprite pack).
         let name: String
+        /// Official Korean name (digimon.net reference_ko — the localized Adventure names).
+        var ko: String? = nil
+        /// True for the four forms without an official Korean entry (transliterated).
+        var koUnverified: Bool? = nil
         /// Sprite path relative to the sprite pack root (`png/agumon/2_rookie_agumon.png`).
         let sprite: String
+        var info: Info? = nil
+
+        func displayName(_ lang: AppLanguage) -> String { lang == .ko ? (ko ?? name) : name }
     }
     struct Line: Decodable, Sendable, Equatable, Identifiable {
         let key: String

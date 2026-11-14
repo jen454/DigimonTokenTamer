@@ -328,19 +328,30 @@ final class UsageStore {
 
     /// One menu bar limit item: its text plus what its color is judged from.
     struct MenuLimitPart: Equatable {
+        /// Service name ("Claude", "Codex") — shown in the tooltip only.
+        var label: String = ""
         var text: String
         var utilization: Double
         /// Elapsed fraction of the window; nil when its reset time or length is unknown.
         var pace: Double?
     }
 
+    /// What the menu bar shows next to the tokens: one percentage without a service name
+    /// (DESIGN §3.1 "200.7M · 82%"), the busiest limit of the services used today. Every limit,
+    /// named, is in the tooltip (`menuToolTip`).
     func menuLimitParts(now: Date = Date()) -> [MenuLimitPart] {
+        guard let busiest = menuLimitCandidates(now: now).max(by: { $0.utilization < $1.utilization }) else { return [] }
+        return [busiest]
+    }
+
+    /// Every limit the menu bar could show, each with its service name.
+    func menuLimitCandidates(now: Date = Date()) -> [MenuLimitPart] {
         guard showLimitInMenu else { return [] }
         let usedToday = Set(snapshots.filter { $0.todayTotalTokens > 0 }.map(\.providerID))
         var parts: [MenuLimitPart] = []
         func add(_ label: String, _ utilization: Double, reset: Date? = nil, span: TimeInterval? = nil) {
             let pace = reset.flatMap { reset in span.flatMap { Self.paceFraction(resetsAt: reset, span: $0, now: now) } }
-            parts.append(MenuLimitPart(text: "\(label) \(TokenFormatter.percent(limitDisplayPercent(utilization)))",
+            parts.append(MenuLimitPart(label: label, text: TokenFormatter.percent(limitDisplayPercent(utilization)),
                                        utilization: utilization, pace: pace))
         }
         if let window = menuClaudeAccount?.status.fiveHour, let utilization = window.utilization {
@@ -400,9 +411,15 @@ final class UsageStore {
     }
 
     /// With several accounts the menu bar percentage can switch account on its own: the tooltip names it.
+    /// Names what the bare percentage belongs to, and with several accounts which one it follows.
     var menuToolTip: String? {
-        guard claudeAccounts.count > 1, let account = menuClaudeAccount else { return nil }
-        return L(localizationLanguage).trackedAccountToolTip(account.title)
+        var lines: [String] = []
+        let limits = menuLimitCandidates()
+        if !limits.isEmpty { lines.append(limits.map { "\($0.label) \($0.text)" }.joined(separator: " · ")) }
+        if claudeAccounts.count > 1, let account = menuClaudeAccount {
+            lines.append(L(localizationLanguage).trackedAccountToolTip(account.title))
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     /// 표시용 한도 % 변환 — remaining 모드면 100−사용률(0 하한: 사용률이 100 을 넘어도 음수 금지).
@@ -694,7 +711,7 @@ final class UsageStore {
         warnThreshold = min(d.object(forKey: "warnThreshold") as? Double ?? 80, storedCrit - Self.thresholdGap)
         showTokensInMenu = d.object(forKey: "showTokensInMenu") as? Bool ?? true
         showCostInMenu = d.object(forKey: "showCostInMenu") as? Bool ?? false
-        showLimitInMenu = d.object(forKey: "showLimitInMenu") as? Bool ?? true   // DESIGN §3.1: tokens · limit %
+        showLimitInMenu = d.object(forKey: "showLimitInMenu") as? Bool ?? false   // tokens only; % can be turned on in Settings
         limitDisplayMode = LimitDisplayMode(rawValue: d.string(forKey: "limitDisplayMode") ?? "") ?? .used
         menuLimitColorMode = MenuLimitColorMode(rawValue: d.string(forKey: "menuLimitColorMode") ?? "") ?? .gauge
         limitNotifications = d.object(forKey: "limitNotifications") as? Bool ?? true

@@ -18,6 +18,22 @@ private func hatchedStore(_ line: String = "agumon") -> TamerStore {
     return store
 }
 
+/// Fills the active partner's gauge exactly once.
+@MainActor
+private func fill(_ store: TamerStore, date: String = "2026-11-14") {
+    guard let partner = store.active else { return }
+    store.credit(store.gaugeSize(for: partner), date: date)
+}
+
+/// A hatched partner raised to a full Rookie gauge, with `wallet` tokens to spend.
+@MainActor
+private func rookieStore(wallet: Int = 2_000_000_000) -> TamerStore {
+    let store = hatchedStore()
+    fill(store); fill(store); fill(store)
+    store.credit(wallet, date: "2026-11-14")
+    return store
+}
+
 @Suite("TokenLedger")
 struct TokenLedgerTests {
     @Test func firstReadingIsBaselineOnly() {
@@ -73,33 +89,43 @@ struct GrowthTests {
         #expect(store.currentEvent == .hatch(line: "agumon"))
     }
 
-    @Test func inTrainingStagesEvolveOnTheirOwnAndRookieWaits() {
+    @Test func inTrainingStagesEvolveOnTheirOwnAndRestartAtZero() {
         let store = hatchedStore()
-        store.credit(TamerBalance.gauge(stage: 0) + TamerBalance.gauge(stage: 1) + 999_000_000, date: "2026-11-14")
+        #expect(store.active?.gauge == 0)
+        // A huge credit still makes one step only; the gauge restarts at 0, nothing carries over.
+        store.credit(999_000_000, date: "2026-11-14")
+        #expect(store.active?.stage == 1)
+        #expect(store.active?.gauge == 0)
+        fill(store)
         #expect(store.active?.stage == 2)
-        // A gated stage stops at a full gauge; overflow is not banked.
-        #expect(store.active?.gauge == TamerBalance.gauge(stage: 2))
+        #expect(store.active?.gauge == 0)
+        store.credit(999_000_000, date: "2026-11-14")
+        // A gated stage stops at a full gauge.
+        #expect(store.active?.stage == 2)
+        #expect(store.active?.gauge == store.threshold(stage: 2))
         #expect(!store.canEvolve)   // no digivice yet
     }
 
     @Test func rookieNeedsDigivice() {
-        let store = hatchedStore()
-        store.credit(2_000_000_000, date: "2026-11-14")
-        #expect(store.shopItems.contains(.digivice))
+        let store = rookieStore()
+        #expect(store.status(.digivice) == .available)
+        #expect(store.status(.pendant) == .locked(.fromChampion))
         #expect(store.buy(.digivice))
+        #expect(store.status(.digivice) == .purchased)
+        #expect(!store.buy(.digivice))
         #expect(store.canEvolve)
         #expect(store.evolve())
         #expect(store.active?.stage == 3)
         #expect(store.active?.gauge == 0)
-        #expect(!store.shopItems.contains(.digivice))
+        #expect(store.status(.digivice) == .purchased)
+        #expect(store.status(.pendant) == .available)
     }
 
     @Test func championNeedsPendantAndShiningCrest() {
-        let store = hatchedStore()
-        store.credit(2_000_000_000, date: "2026-11-01")
+        let store = rookieStore()
         store.buy(.digivice)
         store.evolve()
-        store.credit(TamerBalance.gauge(stage: 3), date: "2026-11-01")
+        fill(store, date: "2026-11-01")
         #expect(store.active?.crestDays == 1)
         #expect(!store.canEvolve)
         // Trial progress accrues without a pendant.
@@ -109,19 +135,20 @@ struct GrowthTests {
         #expect(store.active?.crestEarned == true)
         #expect(store.active?.crestLit == false)
         #expect(!store.state.litCrests.contains("agumon"))
-        #expect(store.shopItems.contains(.pendant))
+        #expect(store.status(.pendant) == .available)
         #expect(store.buy(.pendant))
+        #expect(store.status(.pendant) == .purchased)
         #expect(store.active?.crestLit == true)
         #expect(store.state.litCrests.contains("agumon"))
         #expect(store.state.pendingEvents.contains(.crestLit(line: "agumon")))
         #expect(store.canEvolve)
         #expect(store.evolve())
         #expect(store.active?.stage == 4)
+        #expect(store.active?.gauge == 0)
     }
 
     @Test func sameDayCountsOnceForTheTrial() {
-        let store = hatchedStore()
-        store.credit(2_000_000_000, date: "d1")
+        let store = rookieStore()
         store.buy(.digivice)
         store.evolve()
         store.credit(10, date: "d2")
@@ -130,13 +157,12 @@ struct GrowthTests {
     }
 
     @Test func ultimateNeedsBondFromMeat() {
-        let store = hatchedStore()
-        store.credit(5_000_000_000, date: "d1")
+        let store = rookieStore(wallet: 5_000_000_000)
         store.buy(.digivice); store.evolve()
         store.buy(.pendant)
-        for day in 1...TamerBalance.crestTrialDays { store.credit(TamerBalance.gauge(stage: 3), date: "x\(day)") }
+        for day in 1...TamerBalance.crestTrialDays { fill(store, date: "x\(day)") }
         #expect(store.evolve())
-        store.credit(TamerBalance.gauge(stage: 4), date: "y1")
+        fill(store, date: "y1")
         #expect(!store.canEvolve)
         let meals = TamerBalance.bondLevelForMega * TamerBalance.bondPointsPerLevel / TamerBalance.meatBond
         for _ in 0..<meals { #expect(store.buy(.meat)) }
@@ -145,10 +171,12 @@ struct GrowthTests {
         #expect(store.canEvolve)
         #expect(store.evolve())
         #expect(store.active?.stage == 5)
-        // At Mega, each full gauge becomes one bond level.
+        // At Mega, each full gauge becomes one bond level and the gauge restarts at 0.
         let before = store.active?.bondLevel ?? 0
-        store.credit(TamerBalance.gauge(stage: 5) * 2, date: "y2")
+        fill(store, date: "y2")
+        fill(store, date: "y2")
         #expect(store.active?.bondLevel == before + 2)
+        #expect(store.active?.gauge == 0)
         #expect(!store.canEvolve)
     }
 
@@ -161,18 +189,44 @@ struct GrowthTests {
         #expect(store.state.meat == 1)
     }
 
-    @Test func shopSellsOnlyUnstartedEggsAndSwitchesActive() {
+    @Test func shopListsEverythingAndMarksOwnedEggs() {
+        let fresh = makeStore()
+        #expect(fresh.shopItems.count == 3 + 8)
+        #expect(fresh.status(.digitama(line: "agumon")) == .locked(.firstEggFree))
+        #expect(fresh.status(.meat) == .locked(.firstEggFree))
+        fresh.chooseFirstEgg("agumon")
+        #expect(fresh.status(.meat) == .locked(.needsHatch))
+        // The chosen first egg stays listed, marked as purchased.
+        #expect(fresh.status(.digitama(line: "agumon")) == .purchased)
+        #expect(fresh.status(.digitama(line: "tailmon")) == .available)
+    }
+
+    @Test func boughtEggWaitsInBagUntilRaised() {
         let store = hatchedStore("agumon")
-        #expect(!store.shopItems.contains(.digitama(line: "agumon")))
-        #expect(store.shopItems.contains(.digitama(line: "tailmon")))
         store.credit(TamerBalance.digitamaPrice, date: "d1")
         #expect(store.buy(.digitama(line: "tailmon")))
+        #expect(store.state.bagEggs == ["tailmon"])
+        #expect(store.state.activeLine == "agumon")
+        #expect(store.status(.digitama(line: "tailmon")) == .purchased)
+        #expect(!store.buy(.digitama(line: "tailmon")))
+        #expect(store.startEgg("tailmon"))
+        #expect(store.state.bagEggs.isEmpty)
         #expect(store.state.activeLine == "tailmon")
         #expect(store.storedPartners.map(\.line) == ["agumon"])
         // Stored partners do not grow.
         let stored = store.state.partners.first { $0.line == "agumon" }!
         store.credit(1_000_000, date: "d1")
         #expect(store.state.partners.first { $0.line == "agumon" } == stored)
+    }
+
+    @Test func savesWithoutNewerFieldsStillOpen() throws {
+        // The shape written by 0.1.0, before the bag existed.
+        let old = #"{"spentTokens":0,"ledger":{"lastDate":"2026-11-14","claimed":{"codex":7515820},"baselineSet":true},"activeLine":"agumon","meat":0,"pendingEvents":[],"version":1,"usedSinceInstall":17266038,"partners":[{"crestEarned":false,"startedAt":816348464.4,"stage":-1,"line":"agumon","crestDays":0,"hasPendant":false,"hasDigivice":false,"gauge":1068737,"bondPoints":0}],"notebook":[],"litCrests":[]}"#
+        let state = try JSONDecoder().decode(TamerState.self, from: Data(old.utf8))
+        #expect(state.activeLine == "agumon")
+        #expect(state.active?.gauge == 1_068_737)
+        #expect(state.bagEggs.isEmpty)
+        #expect(state.ledger.lastDate == "2026-11-14")
     }
 
     @Test func displayFormMustBeRegistered() {
@@ -190,6 +244,28 @@ struct GrowthTests {
         store.credit(TamerBalance.eggHatch + 1_000, date: "d1")
         let reloaded = makeStore(name)
         #expect(reloaded.state == store.state)
+    }
+
+    @Test func growthDifficultyScalesGaugeAndKeepsProgress() {
+        let store = hatchedStore()
+        store.credit(store.threshold(stage: 0) / 2, date: "d1")   // half full
+        store.setGrowthDifficulty(2.0)
+        #expect(store.threshold(stage: 0) == TamerBalance.gauge(stage: 0) * 2)
+        #expect(abs(store.gaugeFraction(for: store.active!) - 0.5) < 0.01)
+        #expect(store.active?.stage == 0)   // changing the setting never evolves
+        store.setGrowthDifficulty(0.1)
+        #expect(store.active?.stage == 0)
+        #expect(store.active!.gauge < store.threshold(stage: 0))
+    }
+
+    @Test func shopDifficultyScalesPricesOnly() {
+        let store = hatchedStore()
+        let wallet = store.wallet
+        store.setShopDifficulty(1.5)
+        #expect(store.price(.meat) == TamerBalance.meatPrice * 3 / 2)
+        #expect(store.wallet == wallet)
+        #expect(TamerDifficulty.clamp(9) == TamerDifficulty.range.upperBound)
+        #expect(TamerDifficulty.value(atPosition: TamerDifficulty.position(1.0)) == 1.0)
     }
 
     @Test func catalogHasEightLinesOfSixStages() {
@@ -211,5 +287,36 @@ struct CatalogSourceTests {
             .appendingPathComponent("Sources/DigimonTokenTamer/Resources/Tamer/catalog.json")
         let onDisk = try String(contentsOf: file, encoding: .utf8)
         #expect(onDisk.trimmingCharacters(in: .newlines) == TamerCatalogData.json)
+    }
+}
+
+@Suite("Motions")
+struct MotionTests {
+    @Test func everyMoodLoopsAndActionsCarryTheirIcons() {
+        for mood in [PartnerMood.egg, .idle, .working, .busy, .sleeping, .sulking] {
+            #expect(!MotionScript.loop(mood).isEmpty)
+        }
+        let pet = MotionScript.once(.pet).flatMap(\.overlays).map(\.item)
+        #expect(pet.contains(.icon(.heart)))
+        let eat = MotionScript.once(.eat).flatMap(\.overlays).map(\.item)
+        #expect(eat.contains(.meat(bites: 0)) && eat.contains(.meat(bites: 9)))
+        let sleepingDimmed = MotionScript.loop(.sleeping).allSatisfy(\.dim)
+        #expect(sleepingDimmed)
+        // The walk stays inside the range it is given.
+        let walkInRange = MotionScript.loop(.working, walkRange: 5).allSatisfy { abs($0.dx) <= 5 }
+        #expect(walkInRange)
+    }
+
+    @Test @MainActor func feedingAndBuyingStartMotions() {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tamer-motion-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let store = TamerStore(fileURL: dir.appendingPathComponent("s.json"), defaults: UserDefaults(suiteName: dir.lastPathComponent)!)
+        store.chooseFirstEgg("agumon")
+        store.credit(TamerBalance.eggHatch + TamerBalance.meatPrice, date: "d1")
+        store.buy(.meat)
+        let before = store.actionID
+        #expect(store.feedMeat())
+        #expect(store.action == .eat)
+        #expect(store.actionID == before + 1)
     }
 }

@@ -7,6 +7,16 @@ CONFIGURATION="${DTT_CONFIGURATION:-release}"
 swift build -c "$CONFIGURATION"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 APP="${DTT_OUTPUT_DIR:-build}/DigimonTokenTamer.app"
+# A copy running from this path is quit before its bundle is replaced and reopened afterwards,
+# so the running app never keeps executing code that no longer matches its files.
+# DTT_NO_RELAUNCH=1 skips the reopen.
+RUNNING_BIN="$(cd "$(dirname "$APP")" 2>/dev/null && pwd)/$(basename "$APP")/Contents/MacOS/DigimonTokenTamer"
+WAS_RUNNING=0
+if pgrep -f "$RUNNING_BIN" >/dev/null 2>&1; then
+  WAS_RUNNING=1
+  pkill -TERM -f "$RUNNING_BIN" || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -f "$RUNNING_BIN" >/dev/null 2>&1 || break; sleep 0.5; done
+fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/DigimonTokenTamer" "$APP/Contents/MacOS/DigimonTokenTamer"
@@ -60,4 +70,9 @@ if [ -f assets/build/manifest.json ]; then
 else
   echo "No sprites yet: run ./tools/build_assets.sh, then ./scripts/install-sprites.sh" >&2
 fi
-echo "Run: open $APP"
+if [ "$WAS_RUNNING" = 1 ] && [ "${DTT_NO_RELAUNCH:-0}" != 1 ]; then
+  open "$APP"
+  echo "Relaunched the running copy."
+else
+  echo "Run: open $APP"
+fi

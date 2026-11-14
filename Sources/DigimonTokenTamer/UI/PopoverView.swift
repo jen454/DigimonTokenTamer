@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-enum PopoverTab: CaseIterable { case partner, shop, notebook }
+enum PopoverTab: CaseIterable { case partner, shop, bag, notebook }
 
 /// Popover screen state. `AppDelegate` resets it each time the popover opens, so it always
 /// starts on the partner card (upstream behaviour).
@@ -12,14 +12,17 @@ final class PopoverNavigation {
     var showSettings = false
     /// Open Settings with the advanced section expanded (session-key notices link here).
     var expandAdvancedOnOpen = false
-    /// Provider shown in the limits panel; kept across openings.
+    /// AI tool tab of the usage details (and the limits shown for it); kept across openings.
     var providerID: String?
     /// Claude account tab in the limits panel; kept across openings.
     var claudeAccountID: String?
+    /// The notebook form open in the 아날라이저 (detail page); nil shows the notebook grid.
+    var analyzerForm: FormRef?
 
     func reset() {
         showSettings = false
         expandAdvancedOnOpen = false
+        analyzerForm = nil
         tab = .partner
     }
 
@@ -36,6 +39,9 @@ struct PopoverView: View {
     @Environment(PopoverNavigation.self) private var nav
     @Environment(SpritePack.self) private var pack
 
+    /// Previews render the scroll content inline (ImageRenderer cannot draw a ScrollView).
+    var inlineContentForPreview = false
+
     private var l: L { tamer.l }
     private var t: TamerText { tamer.text }
 
@@ -51,6 +57,13 @@ struct PopoverView: View {
             }
         }
         .frame(width: PopoverMetrics.width)
+        // Scenes play over the whole popover: inside the card a large form was cut off.
+        .overlay {
+            if let event = tamer.currentEvent, !nav.showSettings {
+                SceneOverlay(event: event) { tamer.consumeEvent() }
+                    .id(event.sceneID)
+            }
+        }
         .background(TamerPalette.background)
         .foregroundStyle(TamerPalette.ink)
         .environment(\.colorScheme, .light)
@@ -61,7 +74,7 @@ struct PopoverView: View {
         VStack(alignment: .leading, spacing: 12) {
             header
             if pack.isMissing { spritePackNotice }
-            ScrollView {
+            scrollArea {
                 VStack(alignment: .leading, spacing: 12) {
                     switch nav.tab {
                     case .partner:
@@ -70,13 +83,18 @@ struct PopoverView: View {
                         LimitsPanel(l: l, language: tamer.language, title: t.limitsTitle)
                     case .shop:
                         ShopView()
+                    case .bag:
+                        BagView()
                     case .notebook:
-                        NotebookView()
+                        if let form = nav.analyzerForm {
+                            AnalyzerView(form: form) { nav.analyzerForm = nil }
+                        } else {
+                            NotebookView()
+                        }
                     }
                 }
-                .reservesScrollerLane()
             }
-            .frame(height: 560)
+            .frame(height: 560, alignment: .top)
             footer
                 .padding(.top, 8)
                 .overlay(alignment: .top) { Rectangle().fill(TamerPalette.line).frame(height: 1) }
@@ -96,17 +114,26 @@ struct PopoverView: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "#fff4e5")))
     }
 
+    /// The tab content scrolls without a visible scrollbar: upstream kept a 12 pt lane on the right
+    /// for it, which left every card 14 pt from the left edge but 26 pt from the right.
+    @ViewBuilder
+    private func scrollArea<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if inlineContentForPreview {
+            content()
+        } else {
+            ScrollView { content() }
+                .scrollIndicators(.never)
+        }
+    }
+
     // MARK: Header — title + tabs (mockup `.seg`)
 
     private var header: some View {
         HStack(spacing: 10) {
-            Text(tamer.language == .ko ? "디지몬 토큰 테이머" : "Digimon Token Tamer")
-                .font(.system(size: 14, weight: .bold))
-            Spacer()
             HStack(spacing: 4) {
                 ForEach(PopoverTab.allCases, id: \.self) { tab in
                     let selected = nav.tab == tab
-                    Button { nav.tab = tab } label: {
+                    Button { nav.tab = tab; nav.analyzerForm = nil } label: {
                         Text(title(tab))
                             .font(.system(size: 12))
                             .padding(.horizontal, 9).padding(.vertical, 5)
@@ -123,6 +150,7 @@ struct PopoverView: View {
                     }
                 }
             }
+            Spacer()
         }
     }
 
@@ -130,6 +158,7 @@ struct PopoverView: View {
         switch tab {
         case .partner: return t.tabPartner
         case .shop: return t.tabShop
+        case .bag: return t.tabBag
         case .notebook: return t.tabNotebook
         }
     }
@@ -156,6 +185,15 @@ struct PopoverView: View {
                     .help(store.lastErrorMessage(l) ?? "")
             }
             Spacer()
+            // Desktop pet on/off (upstream footer eye). Hiding is also on the pet's right-click menu.
+            Button {
+                store.floatingPetEnabled.toggle()
+            } label: {
+                Image(systemName: store.floatingPetEnabled ? "eye" : "eye.slash")
+            }
+            .buttonStyle(.borderless)
+            .help(store.floatingPetEnabled ? t.petHide : t.petShow)
+            .accessibilityLabel(store.floatingPetEnabled ? t.petHide : t.petShow)
             Button {
                 nav.showSettings = true
             } label: {

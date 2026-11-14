@@ -25,9 +25,8 @@ extension View {
     }
 }
 
-/// Official limits, ported from DigiMonTokenBar's popover. The Data traffic panel no longer has a
-/// provider tab bar (only "전체 서비스 · 상세 기록" remains), so this panel picks its provider among
-/// the ones that publish limits.
+/// Official limits, ported from DigiMonTokenBar's popover. Shown for the AI tool selected in the
+/// usage details' tab bar, and only when that tool publishes limits (as upstream).
 @MainActor
 struct LimitsPanel: View {
     @Environment(UsageStore.self) private var store
@@ -37,22 +36,14 @@ struct LimitsPanel: View {
     let title: String
     @State private var showingClaudeKeychainHelp = false
 
-    private var limitSnapshots: [ProviderSnapshot] {
-        store.snapshots.filter { providerHasLimits($0.providerID) }
-    }
-
     private var selectedSnapshot: ProviderSnapshot? {
-        limitSnapshots.first { $0.providerID == nav.providerID } ?? limitSnapshots.first
+        store.snapshot(preferring: nav.providerID)
     }
 
     var body: some View {
-        if selectedSnapshot != nil {
+        if let selected = selectedSnapshot, providerHasLimits(selected.providerID) {
             VStack(alignment: .leading, spacing: 8) {
-                TamerSectionHeading(title: title)
-                if limitSnapshots.count > 1 {
-                    ProviderTabBar(snapshots: limitSnapshots, selectedID: selectedSnapshot?.providerID,
-                                   onSelect: { nav.providerID = $0 })
-                }
+                TamerSectionHeading(title: title, detail: selected.displayName)
                 providerStatusBanner
                 limitsSection
             }
@@ -1305,34 +1296,33 @@ struct CapsuleTabBar: View {
     let selectedID: String?
     let onSelect: (String) -> Void
 
+    /// Mockup `.seg` style (rounded, the selected tab dark), wrapping instead of scrolling so
+    /// every AI tool stays visible.
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(items) { item in
-                    let isSelected = item.id == selectedID
-                    Button { onSelect(item.id) } label: {
-                        HStack(spacing: 4) {
-                            if item.marked {
-                                Circle().frame(width: 5, height: 5)
-                            }
-                            Text(item.title)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
+        WrappingHStack(spacing: 6, lineSpacing: 6) {
+            ForEach(items) { item in
+                let isSelected = item.id == selectedID
+                Button { onSelect(item.id) } label: {
+                    HStack(spacing: 4) {
+                        if item.marked {
+                            Circle().frame(width: 5, height: 5)
                         }
-                        .font(.caption.weight(isSelected ? .semibold : .regular))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.08))
-                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                        .overlay(Rectangle().stroke(isSelected ? CyberPalette.cyan.opacity(0.6) : CyberPalette.line, lineWidth: 0.6))
+                        Text(item.title)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
-                    .buttonStyle(.plain)
-                    .help(item.help ?? "")
+                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .foregroundStyle(isSelected ? Color.white : TamerPalette.ink)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Color(hex: "#333333") : Color.white))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color(hex: "#333333") : TamerPalette.line))
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help(item.help ?? "")
             }
         }
-        // 탭이 적으면(대부분의 사용자) 스크롤·바운스가 생기지 않아 기존과 동일하게 보인다.
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 }
 

@@ -230,11 +230,31 @@ actor OAuthAccessTokenCache {
             cachedCredential = credential
             return credential.accessToken
         }
-        let credential = try Self.firstUsableCredential(services: keychainServices) {
-            try Self.readClaudeKeychain(service: $0, allowKeychainPrompt: true)
+        let credential: OAuthCredentialData.Credential
+        do {
+            credential = try Self.firstUsableCredential(services: keychainServices) {
+                try Self.readClaudeKeychain(service: $0, allowKeychainPrompt: true)
+            }
+        } catch LimitsError.keychainUnavailable(let status) where status == errSecAuthFailed {
+            // Refused without a dialog: ask Apple's `security` tool, which shows the keychain
+            // password prompt when it needs one (SecurityToolKeychain).
+            guard let viaTool = Self.readClaudeKeychainViaSecurityTool(services: keychainServices) else {
+                throw LimitsError.keychainUnavailable(status)
+            }
+            AppLog.write("claude keychain read via security tool after errSecAuthFailed")
+            credential = viaTool
         }
         cachedCredential = credential
         return credential.accessToken
+    }
+
+    private nonisolated static func readClaudeKeychainViaSecurityTool(services: [String]) -> OAuthCredentialData.Credential? {
+        for service in services {
+            guard let data = SecurityToolKeychain.readGenericPassword(service: service),
+                  let credential = OAuthCredentialData.credential(from: data) else { continue }
+            return credential
+        }
+        return nil
     }
 
     /// 무프롬프트 Keychain 읽기 — no-UI 쿼리라 권한이 없으면 프롬프트 대신 errSecInteractionNotAllowed.

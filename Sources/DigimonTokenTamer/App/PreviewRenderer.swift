@@ -52,19 +52,26 @@ enum PreviewRenderer {
         }
 
         let day = { (n: Int) in String(format: "2026-11-%02d", n) }
+        /// Fills the current gauge exactly (each evolution restarts at 0).
+        func fill(_ date: String) { if let p = tamer.active { tamer.credit(tamer.gaugeSize(for: p), date: date) } }
         shot("00-first-egg") { PartnerCard() }
+        shot("00b-shop-before-egg") { ShopView() }
         tamer.chooseFirstEgg("agumon")
         tamer.credit(2_000_000, date: day(1))
         shot("01-egg") { PartnerCard() }
         menuBar("menubar-egg")
-        tamer.credit(1_000_000_000, date: day(1))
+        fill(day(1)); fill(day(1)); fill(day(1))          // hatch → In-Training II → Rookie
+        tamer.credit(64_000_000, date: day(1))
+        shot("01b-rookie-gauge") { PartnerCard() }
+        fill(day(1))
+        tamer.credit(1_500_000_000, date: day(1))           // wallet for the shop
         shot("02-rookie-no-digivice") { PartnerCard() }
         menuBar("menubar-rookie")
         tamer.buy(.digivice)
         shot("03-rookie-ready") { PartnerCard() }
         menuBar("menubar-ready")
         tamer.evolve()
-        tamer.credit(TamerBalance.gauge(stage: 3), date: day(2))
+        fill(day(2))
         shot("04-champion-no-pendant") { PartnerCard() }
         tamer.buy(.pendant)
         for d in 3...5 { tamer.credit(1_000, date: day(d)) }
@@ -72,14 +79,45 @@ enum PreviewRenderer {
         for d in 6...9 { tamer.credit(1_000, date: day(d)) }
         shot("06-champion-crest-lit-ready") { PartnerCard() }
         tamer.evolve()
-        tamer.credit(TamerBalance.gauge(stage: 4), date: day(10))
-        tamer.credit(400_000_000, date: day(10))
+        fill(day(10))
         for _ in 0..<6 { tamer.buy(.meat) }
         for _ in 0..<6 { tamer.feedMeat() }
         tamer.buy(.meat)
         shot("07-ultimate-bond") { PartnerCard() }
+        tamer.buy(.digitama(line: "tailmon"))
         shot("08-shop") { ShopView() }
+        shot("08b-bag") { BagView() }
         shot("09-notebook") { NotebookView() }
+        shot("16-analyzer") { AnalyzerView(form: FormRef(line: "agumon", stage: 3)) {} }
+        // Whole popover (tabs, content, footer) at its real width and paddings.
+        func popover(_ name: String, _ tab: PopoverTab) {
+            while tamer.currentEvent != nil { tamer.consumeEvent() }
+            nav.tab = tab
+            let view = PopoverView(inlineContentForPreview: true)
+                .environment(store).environment(tamer).environment(nav).environment(pack)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 2
+            guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
+                  let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return }
+            try? png.write(to: directory.appendingPathComponent(name + ".png"))
+        }
+        popover("20-popover-notebook", .notebook)
+        popover("21-popover-partner", .partner)
+        shot("13-difficulty") { DifficultySection(tamer: tamer) }
+        shot("15-motions") {
+            let path = "png/agumon/2_rookie_agumon.png"
+            HStack(alignment: .bottom, spacing: 18) {
+                MotionSprite(path: path, scale: 2, mood: .idle, stillFrame: MotionScript.once(.pet)[5])
+                MotionSprite(path: path, scale: 2, mood: .idle, stillFrame: MotionScript.once(.eat)[2])
+                MotionSprite(path: path, scale: 2, mood: .sleeping, stillFrame: MotionScript.loop(.sleeping)[2])
+                MotionSprite(path: path, scale: 2, mood: .sulking, stillFrame: MotionScript.loop(.sulking)[0])
+            }
+            .padding(.top, 30).padding(.horizontal, 10)
+        }
+        shot("14-pet", width: 170) { FloatingPetView().frame(width: 168, height: 164) }
+        shot("12-scene-evolve") {
+            SceneOverlay(event: .evolve(line: "agumon", from: 4, to: 5)) {}.frame(height: 620)
+        }
         shot("10-data-traffic") {
             VStack(spacing: 12) {
                 UsageDetailsPanel(l: tamer.l, title: tamer.text.dataTraffic)

@@ -94,17 +94,25 @@ struct TamerChip: View {
     }
 }
 
-/// Underlined blue text button (mockup `.hint a`). Drawn in SwiftUI rather than the AppKit
-/// `.link` style so it also renders in previews.
+/// Small pill button used for in-text actions ("상점", "공식 도감 ↗", "따라가기") — tinted
+/// instead of the default blue underlined link.
 struct TextLink: View {
     let title: String
     var size: CGFloat = 12
+    var tint: Color = TamerPalette.orange
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(title).font(.system(size: size)).underline().foregroundStyle(TamerPalette.link)
+            Text(title)
+                .font(.system(size: size - 1, weight: .semibold))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Capsule().fill(tint.opacity(0.12)))
+                .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 0.8))
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .fixedSize()
         .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
     }
 }

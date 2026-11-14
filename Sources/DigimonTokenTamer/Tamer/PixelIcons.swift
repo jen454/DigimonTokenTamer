@@ -1,8 +1,8 @@
 import AppKit
 
 /// Overlay icons drawn for this app (tools/motion_lab.py ICONS) — original pixel art, safe to ship.
-enum PixelIcon {
-    case exclamation, spark, heart, sleep
+enum PixelIcon: Equatable, Sendable {
+    case exclamation, spark, heart, sleep, note, anger
 
     var rows: [String] {
         switch self {
@@ -10,6 +10,8 @@ enum PixelIcon {
         case .spark: return ["..a..", "..a..", "aabaa", "..a..", "..a.."]
         case .heart: return [".aa.aa.", "abaaaaa", "aaaaaaa", ".aaaaa.", "..aaa..", "...a..."]
         case .sleep: return ["aaaa", "..a.", ".a..", "aaaa"]
+        case .note: return ["..aa", "..a.", "..a.", "aaa.", "aa.."]
+        case .anger: return [".a.a.", "aa.aa", ".....", "aa.aa", ".a.a."]
         }
     }
 
@@ -19,6 +21,8 @@ enum PixelIcon {
         case .spark: return ["a": NSColor(hex: "#ffcc00"), "b": NSColor(hex: "#fff3a0")]
         case .heart: return ["a": NSColor(hex: "#e0245e"), "b": NSColor(hex: "#ff8fb1")]
         case .sleep: return ["a": NSColor(hex: "#5566aa")]
+        case .note: return ["a": NSColor(hex: "#333333")]
+        case .anger: return ["a": NSColor(hex: "#e03a3a")]
         }
     }
 

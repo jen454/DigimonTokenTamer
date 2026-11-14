@@ -2,7 +2,7 @@ import AppKit
 
 /// Menu bar frames (DESIGN §3.1, motion lab "idle" and "ready").
 ///
-/// The icon is 54×22 pt so the "!" badge has room to the right of the character. Sprites up to
+/// The icon is as wide as the character plus a small slot for the "!" badge. Sprites up to
 /// 22 px tall are drawn at an integer scale with nearest-neighbour sampling; taller ones are
 /// scaled down to fit, which the design accepted after checking in the motion lab.
 enum MenuBarArt {
@@ -12,13 +12,16 @@ enum MenuBarArt {
         let delay: TimeInterval
     }
 
-    static let pointSize = NSSize(width: 54, height: 22)
-    /// Device pixels per point: frames are rendered for Retina and downsampled by AppKit elsewhere.
+    static let height: CGFloat = 22
+    /// Device pixels per point: frames are rendered for Retina.
     static let scale: CGFloat = 2
-    private static var pixelWidth: CGFloat { pointSize.width * scale }
-    private static var pixelHeight: CGFloat { pointSize.height * scale }
-    /// Horizontal centre of the character, in device pixels — leaves the right side for "!".
-    private static let centerX: CGFloat = 44
+    private static var pixelHeight: CGFloat { height * scale }
+    /// Left inset of the character, in device pixels.
+    private static let leftInset: CGFloat = 2
+    /// Room kept right of the character for the "!" (4 dots × 2 px + gaps). Always reserved, so
+    /// the item does not change width when evolution becomes possible; it also keeps the token
+    /// text close to the character instead of a fixed 54 pt slot.
+    private static let badgeRoom: CGFloat = 12
 
     /// Device pixels per sprite dot (motion lab: `h<=22?2:h<=44?1:44/h`), narrowed for wide sprites.
     static func dotScale(for pixels: CGSize) -> CGFloat {
@@ -27,8 +30,10 @@ enum MenuBarArt {
         return min(byHeight, 76 / w)
     }
 
-    /// The looping frames for one subject. `ready` adds the bobbing "!" badge.
-    static func loop(sprite: SpritePack.Sprite?, isEgg: Bool, ready: Bool) -> [Frame] {
+    /// The looping frames for one subject. `ready` adds the bobbing "!" badge and wins over the
+    /// mood; otherwise the mood shows (motion lab): asleep → dimmed with a Z, sulking → anger
+    /// mark, coding → a quicker bob.
+    static func loop(sprite: SpritePack.Sprite?, isEgg: Bool, ready: Bool, mood: PartnerMood = .idle) -> [Frame] {
         guard let sprite else { return placeholder(isEgg: isEgg) }
         if ready {
             return (0..<8).compactMap { k in
@@ -39,17 +44,40 @@ enum MenuBarArt {
             return [render(sprite, up: false, flip: false, badgeBob: nil, overlay: nil, delay: 0.6),
                     render(sprite, up: true, flip: false, badgeBob: nil, overlay: nil, delay: 0.6)].compactMap { $0 }
         }
-        // Idle: three bobs facing right, three facing left (motion lab `idle`).
-        var frames: [Frame] = []
-        for flip in [false, true] {
-            for k in 0..<6 {
-                if let f = render(sprite, up: k % 2 == 1, flip: flip, badgeBob: nil, overlay: nil, delay: 0.5) { frames.append(f) }
+        switch mood {
+        case .sleeping:
+            return (0..<4).compactMap { k in
+                render(sprite, up: false, flip: false, badgeBob: nil, overlay: nil, delay: 0.7,
+                       mark: k % 2 == 0 ? .sleep : nil, markLift: k % 4 == 0 ? 0 : 2, dim: true)
             }
+        case .sulking:
+            return (0..<4).compactMap { k in
+                render(sprite, up: k == 1, flip: k >= 2, badgeBob: nil, overlay: nil, delay: 0.4,
+                       mark: k % 2 == 0 ? .anger : nil)
+            }
+        case .working, .busy:
+            let delay = mood == .busy ? 0.2 : 0.3
+            var frames: [Frame] = []
+            for flip in [false, true] {
+                for k in 0..<6 {
+                    if let f = render(sprite, up: k % 2 == 1, flip: flip, badgeBob: nil, overlay: nil, delay: delay) { frames.append(f) }
+                }
+            }
+            return frames
+        case .idle, .egg:
+            // Idle: three bobs facing right, three facing left (motion lab `idle`).
+            var frames: [Frame] = []
+            for flip in [false, true] {
+                for k in 0..<6 {
+                    if let f = render(sprite, up: k % 2 == 1, flip: flip, badgeBob: nil, overlay: nil, delay: 0.5) { frames.append(f) }
+                }
+            }
+            return frames
         }
-        return frames
     }
 
     /// A one-off sequence: the crest twinkles next to the character (DESIGN §3.1, 1–2 s).
+    /// The item widens for these frames only.
     static func crestTwinkle(sprite: SpritePack.Sprite?, crest: SpritePack.Sprite?) -> [Frame] {
         guard let sprite, let crest else { return [] }
         return [1.0, 0.55, 1.0, 0.35].compactMap { alpha in
@@ -57,15 +85,23 @@ enum MenuBarArt {
         }
     }
 
+    private static func context(width: CGFloat) -> CGContext? {
+        CGContext(data: nil, width: Int(width), height: Int(pixelHeight), bitsPerComponent: 8,
+                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    }
+
     private static func render(_ sprite: SpritePack.Sprite, up: Bool, flip: Bool, badgeBob: Int?,
-                               overlay: (SpritePack.Sprite, CGFloat)?, delay: TimeInterval) -> Frame? {
-        guard let ctx = CGContext(data: nil, width: Int(pixelWidth), height: Int(pixelHeight), bitsPerComponent: 8,
-                                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-              let cg = sprite.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+                               overlay: (SpritePack.Sprite, CGFloat)?, delay: TimeInterval,
+                               mark: PixelIcon? = nil, markLift: Int = 0, dim: Bool = false) -> Frame? {
         let s = dotScale(for: sprite.pixels)
         let w = (sprite.pixels.width * s).rounded(), h = (sprite.pixels.height * s).rounded()
-        let x = (centerX - w / 2).rounded()
+        let crestSize: CGFloat = 36
+        var width = leftInset + w + (overlay == nil ? badgeRoom : crestSize + 4)
+        width += width.truncatingRemainder(dividingBy: 2)   // whole points
+        guard let ctx = context(width: width),
+              let cg = sprite.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        let x = leftInset
         let y: CGFloat = 1 + (up ? 2 : 0)   // bottom-aligned, bob by one point
         ctx.interpolationQuality = s >= 1 ? .none : .medium
         ctx.saveGState()
@@ -73,37 +109,38 @@ enum MenuBarArt {
             ctx.translateBy(x: x * 2 + w, y: 0)
             ctx.scaleBy(x: -1, y: 1)
         }
+        if dim { ctx.setAlpha(0.55) }
         ctx.draw(cg, in: CGRect(x: x, y: y, width: w, height: h))
         ctx.restoreGState()
 
         let right = x + w
+        if let mark {
+            // Mood marks share the "!" slot to the right of the character (2 px per dot).
+            mark.draw(in: ctx, origin: CGPoint(x: right + 1, y: CGFloat(4 - markLift)), dot: 2, canvasHeight: pixelHeight)
+        }
         if let bob = badgeBob {
             let icon = PixelIcon.exclamation
-            let dot: CGFloat = 2
-            let bx = min(right + 2, pixelWidth - icon.size.width * dot)
-            icon.draw(in: ctx, origin: CGPoint(x: bx, y: CGFloat(3 - bob * 2)), dot: dot, canvasHeight: pixelHeight)
+            icon.draw(in: ctx, origin: CGPoint(x: right + 2, y: CGFloat(3 - bob * 2)), dot: 2, canvasHeight: pixelHeight)
         }
         if let (crest, alpha) = overlay, let crestCG = crest.image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
             ctx.interpolationQuality = .none
             ctx.setAlpha(alpha)
-            let size: CGFloat = 36
-            ctx.draw(crestCG, in: CGRect(x: min(right + 1, pixelWidth - size), y: pixelHeight - size - 2, width: size, height: size))
+            ctx.draw(crestCG, in: CGRect(x: right + 2, y: pixelHeight - crestSize - 2, width: crestSize, height: crestSize))
         }
         guard let image = ctx.makeImage() else { return nil }
-        let ns = NSImage(cgImage: image, size: pointSize)
+        let ns = NSImage(cgImage: image, size: NSSize(width: width / scale, height: height))
         return Frame(image: ns, cgImage: image, delay: delay)
     }
 
     /// No sprite pack yet: an outlined egg or a dot, so the item is never invisible.
     private static func placeholder(isEgg: Bool) -> [Frame] {
-        guard let ctx = CGContext(data: nil, width: Int(pixelWidth), height: Int(pixelHeight), bitsPerComponent: 8,
-                                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return [] }
+        let width: CGFloat = 40
+        guard let ctx = context(width: width) else { return [] }
         ctx.setStrokeColor(NSColor.labelColor.cgColor)
         ctx.setLineWidth(3)
-        let rect = isEgg ? CGRect(x: centerX - 13, y: 4, width: 26, height: 34) : CGRect(x: centerX - 14, y: 6, width: 28, height: 28)
+        let rect = isEgg ? CGRect(x: 6, y: 4, width: 26, height: 34) : CGRect(x: 5, y: 6, width: 28, height: 28)
         ctx.strokeEllipse(in: rect)
         guard let image = ctx.makeImage() else { return [] }
-        return [Frame(image: NSImage(cgImage: image, size: pointSize), cgImage: image, delay: 1)]
+        return [Frame(image: NSImage(cgImage: image, size: NSSize(width: width / scale, height: height)), cgImage: image, delay: 1)]
     }
 }

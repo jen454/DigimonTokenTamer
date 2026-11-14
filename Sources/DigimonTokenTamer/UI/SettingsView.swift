@@ -55,6 +55,8 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         generalGroup(store)
                         displayFormGroup
+                        DifficultySection(tamer: tamer)
+                        floatingPetGroup(store)
                         menuBarGroup(store)
                         notificationsGroup(store)
                         spritePackGroup
@@ -678,7 +680,34 @@ struct SettingsView: View {
 
     private func formLabel(_ form: FormRef) -> String {
         guard let line = tamer.catalog.line(form.line) else { return form.key }
-        return "\(line.stages[form.stage].name) · \(tamer.catalog.stageName(form.stage, tamer.language))"
+        return "\(line.stages[form.stage].displayName(tamer.language)) · \(tamer.catalog.stageName(form.stage, tamer.language))"
+    }
+
+    /// Desktop pet (FloatingPetController): on/off and size.
+    @ViewBuilder
+    private func floatingPetGroup(_ store: UsageStore) -> some View {
+        @Bindable var store = store
+        settingsSection(t.petTitle) {
+            groupRow {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(t.petToggle)
+                    Text(t.petHint).font(.caption2).foregroundStyle(TamerPalette.mute)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Toggle(t.petToggle, isOn: $store.floatingPetEnabled)
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small)
+            }
+            if store.floatingPetEnabled {
+                Divider()
+                groupRow {
+                    Text(t.petSize)
+                    Slider(value: $store.floatingPetSize, in: 48...192, step: 8)
+                        .accessibilityLabel(t.petSize)
+                    Text("\(Int(store.floatingPetSize))pt").font(.caption).monospacedDigit().frame(width: 44, alignment: .trailing)
+                }
+            }
+        }
     }
 
     /// DESIGN §5.2: artwork is not bundled. Shows where it is read from and how much was found.

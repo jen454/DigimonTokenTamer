@@ -17,24 +17,19 @@ struct PartnerCard: View {
         }
         .padding(16)
         .tamerCard(radius: 14)
-        .overlay {
-            if let event = tamer.currentEvent {
-                SceneOverlay(event: event) { tamer.consumeEvent() }
-                    .id(event.sceneID)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-        }
+        // Scenes (evolution, hatching, crest) cover the whole popover — see PopoverView.
     }
 }
 
 @MainActor
 private struct PartnerCardContent: View {
     @Environment(TamerStore.self) private var tamer
+    @Environment(UsageStore.self) private var usage
+    @Environment(SpritePack.self) private var pack
     @Environment(PopoverNavigation.self) private var nav
     let partner: PartnerState
     let line: TamerCatalog.Line
 
-    @State private var eating = false
     @State private var digiviceArrived = false
     @State private var crestFlying = false
 
@@ -46,23 +41,17 @@ private struct PartnerCardContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            stage
-            HStack(alignment: .firstTextBaseline) {
-                Text(tamer.name(of: partner)).font(.system(size: 15, weight: .bold))
-                Spacer()
-                Text("\(t.lineLabel(line.ko, line.key)) · \(stageLabel)")
-                    .font(.system(size: 12)).foregroundStyle(TamerPalette.mute)
+            // DigiMonTokenBar-style header: the character on the left, its profile and gauge on the right.
+            HStack(alignment: .top, spacing: 14) {
+                stage
+                infoColumn
             }
-            .padding(.top, 12).padding(.bottom, 6)
-            TamerBar(fraction: tamer.gaugeFraction(for: partner))
-                .help(TokenFormatter.grouped(partner.gauge) + " / " + TokenFormatter.grouped(tamer.gaugeSize(for: partner)))
-            checksRow.padding(.top, 7)
+            checksRow.padding(.top, 10)
             if let row = equipmentRow { row.padding(.top, 14) }
             if let hint { hint.padding(.top, 8) }
             if tamer.state.meat > 0, !partner.isEgg {
-                Button(t.feedMeat(tamer.state.meat)) { feed() }
+                Button(t.feedMeat(tamer.state.meat)) { tamer.feedMeat() }
                     .buttonStyle(.bordered).controlSize(.small).padding(.top, 8)
-                    .disabled(eating)
             }
             if !tamer.storedPartners.isEmpty { storageRow.padding(.top, 10) }
         }
@@ -79,29 +68,98 @@ private struct PartnerCardContent: View {
         .onAppear { digiviceArrived = true }
     }
 
-    // MARK: ① Stage
+    // MARK: ① Stage — click to pet
+
+    private static let stageSide: CGFloat = 132
 
     private var stage: some View {
-        ZStack(alignment: .bottom) {
+        let pixels = pack.sprite(spritePath)?.pixels ?? CGSize(width: 32, height: 32)
+        // Largest whole scale (up to 3×) that fits the box: ultimate/mega forms (~55 px) get 2×.
+        let scale = max(1, min(3, ((Self.stageSide - 12) / max(pixels.height, pixels.width)).rounded(.down)))
+        let walkRange = max(2, Int((Self.stageSide - pixels.width * scale) / 2 / scale) - 1)
+        return ZStack(alignment: .bottom) {
             LinearGradient(colors: [TamerPalette.stageTop, TamerPalette.stageBottom], startPoint: .top, endPoint: .bottom)
-            HStack(alignment: .bottom, spacing: 4) {
-                StageSprite(path: spritePath, isEgg: partner.isEgg, eating: eating)
-                if tamer.canEvolve {
-                    Button { tamer.evolve() } label: { BouncingBadge() }
-                        .buttonStyle(.plain)
-                        .help(t.evolveNow)
-                        .accessibilityLabel(t.evolveNow)
-                        .padding(.bottom, 40)
-                }
-            }
-            .padding(.bottom, 10)
+            MotionSprite(path: spritePath, scale: scale,
+                         mood: PartnerMood.current(usage: usage, tamer: tamer),
+                         action: tamer.action, actionID: tamer.actionID, actionAt: tamer.actionAt,
+                         walkRange: walkRange)
+                .padding(.bottom, 8)
         }
-        .frame(height: 150)
+        .frame(width: Self.stageSide, height: Self.stageSide)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
+        .onTapGesture { if !partner.isEgg { tamer.perform(.pet) } }
+        .help(partner.isEgg ? "" : t.petHelp)
+        .overlay(alignment: .topTrailing) {
+            if tamer.canEvolve {
+                Button { tamer.evolve() } label: { BouncingBadge() }
+                    .buttonStyle(.plain)
+                    .help(t.evolveNow)
+                    .accessibilityLabel(t.evolveNow)
+                    .padding(8)
+            }
+        }
     }
 
     private var spritePath: String {
         partner.isEgg ? line.eggSprite : line.stages[partner.stage].sprite
+    }
+
+    // MARK: ②③ Profile and gauge
+
+    private var info: TamerCatalog.Info? {
+        partner.isEgg ? nil : line.stages[partner.stage].info
+    }
+
+    private var infoColumn: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(t.lineLabel(line.ko, line.key)) · \(stageLabel)")
+                .font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
+            Text(tamer.name(of: partner))
+                .font(.system(size: 18, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+            if let info {
+                // Type and attribute, then the signature moves listed to their right (wrapping when long).
+                WrappingHStack(spacing: 4, lineSpacing: 4) {
+                    TamerChip(text: info.type.text(tamer.language))
+                    if !info.attribute.text(tamer.language).isEmpty { TamerChip(text: info.attribute.text(tamer.language)) }
+                    ForEach(info.moves.list(tamer.language), id: \.self) { move in
+                        Text(move)
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .foregroundStyle(crestColor)
+                            .overlay(Capsule().stroke(crestColor.opacity(0.5), lineWidth: 1))
+                            .fixedSize()
+                            .help(t.movesLabel)
+                    }
+                }
+            } else if !partner.isEgg {
+                Text(t.noProfile).font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
+            } else {
+                Text(t.eggInfo(line.ko, crest: t.crestName(line.crest.ko, en: line.crest.en)))
+                    .font(.system(size: 11)).foregroundStyle(TamerPalette.mute)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 6)
+            HStack(spacing: 4) {
+                Text(partner.isEgg ? t.hatchGauge : t.evolutionGauge).foregroundStyle(TamerPalette.mute)
+                Spacer()
+                Text(TokenFormatter.compact(partner.gauge)).fontWeight(.semibold).foregroundStyle(TamerPalette.ink)
+                Text("/ " + TokenFormatter.compact(tamer.gaugeSize(for: partner)))
+                    .foregroundStyle(TamerPalette.mute)
+            }
+            .font(.system(size: 11)).monospacedDigit()
+            TamerBar(fraction: tamer.gaugeFraction(for: partner))
+                .help(TokenFormatter.grouped(partner.gauge) + " / " + TokenFormatter.grouped(tamer.gaugeSize(for: partner)) + " tokens")
+            Text(remainingText).font(.system(size: 10)).foregroundStyle(TamerPalette.mute)
+        }
+        .frame(maxWidth: .infinity, minHeight: Self.stageSide, alignment: .topLeading)
+    }
+
+    private var remainingText: String {
+        let left = max(0, tamer.gaugeSize(for: partner) - partner.gauge)
+        if partner.isEgg { return t.toHatch(TokenFormatter.compact(left)) }
+        if partner.stage == TamerCatalog.stageCount - 1 { return t.toBondLevel(TokenFormatter.compact(left)) }
+        return left == 0 ? t.gaugeFull : t.toNextStage(TokenFormatter.compact(left))
     }
 
     // MARK: ④ Conditions
@@ -110,13 +168,9 @@ private struct PartnerCardContent: View {
     private var checksRow: some View {
         let checks = tamer.checks(for: partner)
         if partner.isEgg {
-            HStack(spacing: 6) {
-                Text(t.hatchLabel).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(hex: "#555555"))
-                checkChip(met: false, text: t.gaugeCheck(Int(tamer.gaugeFraction(for: partner) * 100)))
-            }
+            checkChip(met: false, text: t.hatchCheck(Int(tamer.gaugeFraction(for: partner) * 100)))
         } else if !checks.isEmpty {
             WrappingHStack(spacing: 6, lineSpacing: 4) {
-                Text(t.untilStage(nextStageLabel)).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(hex: "#555555"))
                 ForEach(Array(checks.enumerated()), id: \.offset) { _, check in
                     checkChip(met: check.met, text: label(for: check))
                 }
@@ -234,11 +288,10 @@ private struct PartnerCardContent: View {
             AnyView(HStack(spacing: 4) {
                 Text(text).font(.system(size: 12)).foregroundStyle(Color(hex: "#555555"))
                     .fixedSize(horizontal: false, vertical: true)
-                if shop {
-                    Text("→").font(.system(size: 12)).foregroundStyle(Color(hex: "#555555"))
-                    TextLink(title: t.goShop, size: 12) { nav.tab = .shop }
-                }
                 Spacer(minLength: 0)
+                if shop {
+                    TextLink(title: t.goShop + " ›", size: 12) { nav.tab = .shop }
+                }
             }
             .padding(.horizontal, 9).padding(.vertical, 7)
             .background(RoundedRectangle(cornerRadius: 8).fill(TamerPalette.hint)))
@@ -256,16 +309,7 @@ private struct PartnerCardContent: View {
         }
     }
 
-    // MARK: Meat & storage
-
-    private func feed() {
-        guard tamer.feedMeat() else { return }
-        eating = true
-        Task {
-            try? await Task.sleep(for: .seconds(2.6))
-            eating = false
-        }
-    }
+    // MARK: Storage
 
     private var storageRow: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -282,36 +326,6 @@ private struct PartnerCardContent: View {
                         .buttonStyle(.plain)
                         .help("\(tamer.name(of: stored)) · \(t.storageHint)")
                     }
-                }
-            }
-        }
-    }
-}
-
-/// The character on the stage, with the idle bob and the meat-eating motion (motion lab `eat`).
-@MainActor
-private struct StageSprite: View {
-    @Environment(SpritePack.self) private var pack
-    let path: String
-    let isEgg: Bool
-    let eating: Bool
-
-    var body: some View {
-        let pixels = pack.sprite(path)?.pixels ?? CGSize(width: 32, height: 32)
-        // Mockup: `min(3, floor(120 / max(h, w * 0.8)))`.
-        let scale = max(1, min(3, (120 / max(pixels.height, pixels.width * 0.8)).rounded(.down)))
-        TimelineView(.periodic(from: .now, by: eating ? 0.25 : 0.5)) { context in
-            let tick = Int(context.date.timeIntervalSinceReferenceDate / (eating ? 0.25 : 0.5))
-            HStack(alignment: .bottom, spacing: 2) {
-                PixelSprite(path: path, scale: scale, placeholder: CGSize(width: 60, height: 60))
-                    .offset(y: tick % 2 == 0 ? 0 : -scale)
-                if eating {
-                    let bites = min(3, (tick % 12) / 3)
-                    PixelSprite(path: TamerAssets.meat, scale: 2, placeholder: CGSize(width: 32, height: 32))
-                        .mask(alignment: .trailing) {
-                            Rectangle().frame(width: 32 * CGFloat(3 - bites) / 3)
-                        }
-                        .padding(.bottom, scale * 4)
                 }
             }
         }

@@ -13,12 +13,13 @@ import Foundation
 enum TamerBalance {
     // MARK: Gauge
 
-    /// Tokens to hatch a digitama. Overflow carries into In-Training I.
+    /// Tokens to hatch a digitama. Every step restarts the gauge at 0 (no carry-over).
     static let eggHatch = 5_000_000
 
     /// Tokens to fill the gauge at each stage (index = stage). The last entry is the Mega gauge,
     /// which turns into one bond level each time it fills (DESIGN §2.2 "궁극체 이후").
-    /// Sum egg → Mega ≈ 650M, close to upstream's 750M common line.
+    /// Sum egg → Mega ≈ 650M, close to upstream's 750M common line. Multiplied by the growth
+    /// difficulty (`TamerStore.threshold`); prices by the shop difficulty.
     static let stageGauge = [15_000_000, 30_000_000, 100_000_000, 200_000_000, 300_000_000, 300_000_000]
 
     static func gauge(stage: Int) -> Int {

@@ -49,6 +49,8 @@ struct TamerState: Codable, Equatable, Sendable {
     /// Menu bar form chosen in Settings/notebook; nil follows the active partner.
     var displayForm: FormRef?
     var pendingEvents: [TamerEvent] = []
+    /// Digitama bought in the shop and waiting in the bag until the user starts raising them.
+    var bagEggs: [String] = []
 
     var active: PartnerState? {
         get { partners.first { $0.line == activeLine } }
@@ -61,7 +63,30 @@ struct TamerState: Codable, Equatable, Sendable {
     var wallet: Int { max(0, usedSinceInstall - spentTokens) }
 
     func hasStarted(_ line: String) -> Bool { partners.contains { $0.line == line } }
+    /// Started, or bought and waiting in the bag: the shop shows "구매 완료".
+    func ownsEgg(_ line: String) -> Bool { hasStarted(line) || bagEggs.contains(line) }
     func isRegistered(_ form: FormRef) -> Bool { notebook.contains(form.key) }
+}
+
+extension TamerState {
+    /// Every field is optional on read, so a save from an earlier version (without newer fields
+    /// such as `bagEggs`) still opens instead of being set aside as unreadable.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? version
+        partners = try c.decodeIfPresent([PartnerState].self, forKey: .partners) ?? []
+        activeLine = try c.decodeIfPresent(String.self, forKey: .activeLine)
+        ledger = try c.decodeIfPresent(TokenLedger.self, forKey: .ledger) ?? TokenLedger()
+        usedSinceInstall = try c.decodeIfPresent(Int.self, forKey: .usedSinceInstall) ?? 0
+        spentTokens = try c.decodeIfPresent(Int.self, forKey: .spentTokens) ?? 0
+        meat = try c.decodeIfPresent(Int.self, forKey: .meat) ?? 0
+        notebook = try c.decodeIfPresent(Set<String>.self, forKey: .notebook) ?? []
+        litCrests = try c.decodeIfPresent(Set<String>.self, forKey: .litCrests) ?? []
+        displayForm = try c.decodeIfPresent(FormRef.self, forKey: .displayForm)
+        pendingEvents = try c.decodeIfPresent([TamerEvent].self, forKey: .pendingEvents) ?? []
+        bagEggs = try c.decodeIfPresent([String].self, forKey: .bagEggs) ?? []
+    }
 }
 
 /// One check in the card's condition row ("성숙기까지 ✓ 진화 게이지 100% · 디지바이스").

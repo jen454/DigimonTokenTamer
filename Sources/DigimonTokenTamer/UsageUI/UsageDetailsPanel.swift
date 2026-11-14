@@ -5,11 +5,13 @@ import SwiftUI
 /// DigiMonTokenBar's Data traffic panel had a provider tab bar, the input/output ring console,
 /// week/month/provider registers, the activity strip and, folded under a disclosure, the
 /// all-services details. Only the details remain, now always open: today's total, this week and
-/// this month, the month's daily trend stacked by provider, and today's breakdown for every
-/// provider rather than the one selected tab.
+/// this month, the month's daily trend stacked by provider, then the AI tool tabs (moved here
+/// from the old console) with the selected tool's breakdown — input, output, cache, models.
+/// The limits panel below follows the same tab.
 @MainActor
 struct UsageDetailsPanel: View {
     @Environment(UsageStore.self) private var store
+    @Environment(PopoverNavigation.self) private var nav
     let l: L
     let title: String
 
@@ -34,14 +36,19 @@ struct UsageDetailsPanel: View {
                                     name: snap.displayName, days: $0, reportsCost: snap.reportsCost) }
                             }, providerOrder: store.registeredProviderIDs, showsCost: store.showsCost,
                             today: LocalUsageReader.todayKey(), l: l)
-            let rows = store.snapshots.compactMap { snap in snap.today.map { (snap, $0) } }
-            if rows.isEmpty, store.lastUpdated != nil {
+            if !store.snapshots.isEmpty {
+                Divider().overlay(TamerPalette.nbLine)
+                ProviderTabBar(snapshots: store.snapshots, selectedID: selected?.providerID,
+                               onSelect: { nav.providerID = $0 })
+                if let selected, let today = selected.today {
+                    providerRow(snapshot: selected, today: today)
+                } else {
+                    Text(l.lang == .ko ? "오늘 기록된 사용량이 없어요." : "No usage recorded today.")
+                        .font(.caption).foregroundStyle(TamerPalette.mute)
+                }
+            } else if store.lastUpdated != nil {
                 Text(l.lang == .ko ? "오늘 기록된 사용량이 없어요." : "No usage recorded today.")
                     .font(.caption).foregroundStyle(TamerPalette.mute)
-            }
-            ForEach(rows, id: \.0.providerID) { snapshot, today in
-                Divider().overlay(TamerPalette.nbLine)
-                providerRow(snapshot: snapshot, today: today)
             }
         }
         .font(.system(size: 11))
@@ -49,6 +56,9 @@ struct UsageDetailsPanel: View {
         .padding(12)
         .tamerCard()
     }
+
+    /// The tapped AI tool, or the first one.
+    private var selected: ProviderSnapshot? { store.snapshot(preferring: nav.providerID) }
 
     private func periodLabel(_ name: String, tokens: Int, cost: UsageCost?) -> some View {
         HStack(spacing: 4) {
@@ -61,7 +71,7 @@ struct UsageDetailsPanel: View {
     private func providerRow(snapshot: ProviderSnapshot, today: DailyUsage) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Text(snapshot.displayName).font(.callout.weight(.semibold))
+                Text(l.todayTokens).font(.caption).foregroundStyle(TamerPalette.mute)
                 Spacer()
                 Text(TokenFormatter.compact(today.totalTokens)).font(.callout).monospacedDigit()
                 if snapshot.reportsCost {

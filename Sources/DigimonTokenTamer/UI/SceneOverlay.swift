@@ -43,7 +43,7 @@ struct SceneOverlay: View {
             Color(red: 20 / 255, green: 20 / 255, blue: 30 / 255).opacity(0.86)
             VStack(spacing: 14) {
                 Spacer(minLength: 0)
-                stageContent.frame(height: 190)
+                stageContent.frame(height: 260)
                 VStack(spacing: 4) {
                     Text(title).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                     if let subtitle { Text(subtitle).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7)) }
@@ -85,7 +85,7 @@ struct SceneOverlay: View {
         } else if let paths {
             ZStack(alignment: .bottom) {
                 PixelSprite(path: frame.who == .current ? paths.current : paths.next,
-                            fit: CGSize(width: 180, height: 170), mode: frame.mode,
+                            fit: CGSize(width: 230, height: 220), mode: frame.mode,
                             placeholder: CGSize(width: 90, height: 90))
                     .offset(x: frame.dx, y: frame.dy)
                 if frame.crack {
@@ -97,7 +97,7 @@ struct SceneOverlay: View {
                         PixelIconView(icon: .spark, dot: 4)
                         PixelIconView(icon: .spark, dot: 4).offset(y: 30)
                     }
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 150)
                 }
             }
         }
@@ -109,9 +109,9 @@ struct SceneOverlay: View {
         case .crestLit:
             return line.map { t.crestLitTitle($0.crest.ko, en: $0.crest.en) } ?? ""
         case .hatch:
-            return t.hatchedTitle(line?.stages[0].name ?? "")
+            return t.hatchedTitle(line?.stages[0].displayName(tamer.language) ?? "")
         case .evolve(_, _, let to):
-            return t.evolvedTitle(line?.stages[to].name ?? "")
+            return t.evolvedTitle(line?.stages[to].displayName(tamer.language) ?? "")
         }
     }
 

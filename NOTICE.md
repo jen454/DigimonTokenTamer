@@ -18,6 +18,10 @@ the light pixel UI and the sprite pipeline under `tools/` are new to this projec
 The "DATA TRAFFIC" panel keeps only DigiMonTokenBar's "전체 서비스 · 상세 기록"
 (all services · details) part.
 
+The short profile facts on the partner card (type, attribute, signature move names) for 44 of the
+48 forms come from DigiMonTokenBar's species data, which cites the official digimon.net reference.
+Profile prose is not included.
+
 ## Third-party intellectual property
 
 Digimon characters, names, crests, the Digivice and Tag designs and related artwork are not owned

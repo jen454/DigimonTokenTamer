@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var tamer: TamerStore!
     private let pack = SpritePack.shared
     private let navigation = PopoverNavigation()
+    private var floatingPet: FloatingPetController?
 
     private var frames: [MenuBarArt.Frame] = []
     private var frameIndex = 0
@@ -68,10 +69,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         tamer.onNotify = { [weak self] title, body in self?.postNotification(title, body) }
         lastCrestEvents = crestEventCount
         pack.prefetch(SpritePack.allPaths(tamer.catalog))   // first launch downloads the sprite pack
+        floatingPet = FloatingPetController(store: store, tamer: tamer, pack: pack,
+                                            onOpenPopover: { [weak self] in self?.showPopover() })
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.imagePosition = .imageLeading
+            button.imageHugsTitle = true   // no extra gap between the character and the numbers
             button.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
             button.cell?.usesSingleLineMode = false
             button.action = #selector(statusItemClicked)
@@ -116,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         withObservationTracking {
             _ = tamer.menuSubject
             _ = tamer.canEvolve
+            _ = PartnerMood.current(usage: store, tamer: tamer)
             _ = tamer.state.pendingEvents
             _ = pack.generation
         } onChange: { [weak self] in
@@ -178,12 +183,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             let title = lines.first ?? ""
             if !colors.isEmpty, !title.isEmpty {
                 let colored = NSMutableAttributedString(
-                    string: " " + title,
+                    string: title,
                     attributes: [.font: button.font ?? NSFont.menuBarFont(ofSize: 0)])
                 MenuLimitColoring.apply(colors, to: colored)
                 button.attributedTitle = colored
             } else {
-                button.title = title.isEmpty ? "" : " " + title
+                button.title = title
             }
         }
     }
@@ -206,7 +211,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let subject = subjectSprite
         let sprite = subject.path.flatMap { pack.sprite($0) }
         let ready = tamer.canEvolve
-        let key = "\(subject.path ?? "-")|\(ready)|\(sprite != nil)|\(pack.generation)"
+        let mood = PartnerMood.current(usage: store, tamer: tamer)
+        let key = "\(subject.path ?? "-")|\(ready)|\(mood.rawValue)|\(sprite != nil)|\(pack.generation)"
 
         // A crest that just lit twinkles once next to the character (DESIGN §3.1).
         let crests = crestEventCount
@@ -217,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         guard key != framesKey || !oneShot.isEmpty else { return }
         framesKey = key
-        frames = MenuBarArt.loop(sprite: sprite, isEgg: subject.isEgg, ready: ready)
+        frames = MenuBarArt.loop(sprite: sprite, isEgg: subject.isEgg, ready: ready, mood: mood)
         frameIndex = 0
         advanceFrame()
     }
@@ -303,7 +309,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         if popover.isShown { popover.performClose(nil) }
         let entries = StatusItemMenu.entries(
-            l: tamer.l, notebookTitle: tamer.text.tabNotebook, todayTokens: store.todayTotalTokens,
+            l: tamer.l, notebookTitle: tamer.text.tabNotebook,
+            petTitle: store.floatingPetEnabled ? tamer.text.petHide : tamer.text.petShow,
+            todayTokens: store.todayTotalTokens,
             todayCost: store.showsCost ? store.todayUsageCost : nil)
         statusItem.menu = StatusItemMenu.build(entries, target: self, selector: #selector(handleStatusMenu(_:)))
         button.performClick(nil)
@@ -315,6 +323,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case .refresh: Task { await store.refresh() }
         case .openNotebook: showPopover { $0.tab = .notebook }
         case .openSettings: showPopover { $0.showSettings = true }
+        case .toggleFloatingPet: store.floatingPetEnabled.toggle()
         case .quit: NSApp.terminate(nil)
         case nil: break
         }
