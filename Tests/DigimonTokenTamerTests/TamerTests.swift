@@ -200,3 +200,16 @@ struct GrowthTests {
         #expect(Set(catalog.lines.map(\.crest.key)).count == 8)
     }
 }
+
+@Suite("Catalog source")
+struct CatalogSourceTests {
+    /// `TamerCatalogData.swift` is generated from catalog.json; editing one without re-running
+    /// scripts/gen-catalog.sh must fail here.
+    @Test func embeddedCatalogMatchesJSONFile() throws {
+        let file = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/DigimonTokenTamer/Resources/Tamer/catalog.json")
+        let onDisk = try String(contentsOf: file, encoding: .utf8)
+        #expect(onDisk.trimmingCharacters(in: .newlines) == TamerCatalogData.json)
+    }
+}

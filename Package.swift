@@ -8,7 +8,9 @@ let package = Package(
         .executableTarget(
             name: "DigimonTokenTamer",
             path: "Sources/DigimonTokenTamer",
-            resources: [.copy("Resources/Tamer")],
+            // catalog.json is compiled in (scripts/gen-catalog.sh): a resource bundle would embed the
+            // absolute build path in the binary through the generated Bundle.module accessor.
+            exclude: ["Resources"],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
         .testTarget(

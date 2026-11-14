@@ -19,4 +19,7 @@ AI 코딩 도구의 토큰 사용량으로 디지몬 어드벤처 파트너 8계
   - `Tamer/`, `UI/`: 이 프로젝트의 육성 게임과 화면
   - 밸런스 수치는 `Tamer/TamerBalance.swift` 한 곳에만 둔다.
   - 테스트는 `./scripts/test.sh`로 돌린다 (Swift Testing).
+  - `catalog.json`을 고치면 `./scripts/gen-catalog.sh`를 다시 돌린다.
+    - SwiftPM 리소스 번들은 쓰지 않는다. `Bundle.module`이 빌드 PC의 경로를 바이너리에 넣기 때문이다.
+  - 배포: 스프라이트는 별도 공개 저장소(jen454/DigimonTokenTamer-sprites, `scripts/package-sprites.sh`)에 두고, 앱 zip은 Release에 올린다 (`scripts/package-app.sh`).
   - 앱 저장소, 로그, 로그인 항목 이름은 `DigimonTokenTamer`를 쓴다. 상류 앱(DigiTokenBar)의 파일을 건드리지 않는다.

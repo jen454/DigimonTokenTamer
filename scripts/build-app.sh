@@ -12,13 +12,17 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/DigimonTokenTamer" "$APP/Contents/MacOS/DigimonTokenTamer"
 # Drop local symbols that can embed the builder's home directory.
 strip -S -x "$APP/Contents/MacOS/DigimonTokenTamer"
-cp -R Sources/DigimonTokenTamer/Resources/Tamer "$APP/Contents/Resources/"
 # Guard: no artwork may enter the bundle (docs/DESIGN.md §5.2).
 if find "$APP/Contents/Resources" \( -name '*.png' -o -name '*.gif' -o -name '*.svg' -o -name '*.webp' \) | grep -q .; then
   echo "Refusing to build: image files found in the app bundle." >&2
   exit 1
 fi
 cp LICENSE NOTICE.md "$APP/Contents/Resources/"
+# Guard: the binary must not carry the builder's local paths (home folder / user name).
+if strings "$APP/Contents/MacOS/DigimonTokenTamer" | grep -q "$HOME"; then
+  echo "Refusing to build: the binary embeds a local path under $HOME." >&2
+  exit 1
+fi
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

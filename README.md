@@ -59,6 +59,7 @@ open build/DigimonTokenTamer.app
 ```sh
 swift build
 ./scripts/test.sh              # Swift Testing (CLT 환경에서는 Testing.framework 경로를 잡아 줌)
+./scripts/gen-catalog.sh       # Resources/Tamer/catalog.json 을 고친 뒤 Swift 소스로 다시 포함
 
 # 상태별 화면을 PNG로 렌더링 (실제 저장/설정은 건드리지 않음)
 DTT_STATE_DIR=/tmp/dtt DTT_SPRITES_DIR=$PWD/assets/build DTT_RENDER_PREVIEWS=/tmp/dtt-previews \
@@ -81,7 +82,7 @@ Sources/DigimonTokenTamer/
   UI/        파트너 카드, 연출, 상점, 수첩, 설정, 테마
   Usage/     DigiMonTokenBar 사용량 파이프라인 (로그 파서, 캐시, 한도, UsageStore)
   UsageUI/   상세 기록 패널, 한도 패널, 월간 추이 (DigiMonTokenBar에서 이식)
-  Resources/Tamer/catalog.json   8계열 × 6단계 이름·문장·스프라이트 경로 (이미지 없음)
+  Resources/Tamer/catalog.json   8계열 × 6단계 이름·문장·스프라이트 경로 (이미지 없음, 빌드 시 Swift 소스로 포함)
 Tests/DigimonTokenTamerTests/    토큰 장부, 진화 조건, 상점, 저장
 tools/     에셋 생성 스크립트 (Python)
 scripts/   앱 빌드, 스프라이트 설치, 테스트

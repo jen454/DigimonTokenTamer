@@ -1,0 +1,331 @@
+// Generated from Resources/Tamer/catalog.json by scripts/gen-catalog.sh — do not edit.
+enum TamerCatalogData {
+    static let json = #"""
+{
+ "version": 1,
+ "note": "Metadata only. Sprite paths are relative to the sprite pack root (tools/build_assets.sh output); no artwork is bundled.",
+ "stages": [
+  {
+   "key": "0_baby1",
+   "ko": "유년기 I",
+   "en": "In-Training I"
+  },
+  {
+   "key": "1_baby2",
+   "ko": "유년기 II",
+   "en": "In-Training II"
+  },
+  {
+   "key": "2_rookie",
+   "ko": "성장기",
+   "en": "Rookie"
+  },
+  {
+   "key": "3_champion",
+   "ko": "성숙기",
+   "en": "Champion"
+  },
+  {
+   "key": "4_ultimate",
+   "ko": "완전체",
+   "en": "Ultimate"
+  },
+  {
+   "key": "5_mega",
+   "ko": "궁극체",
+   "en": "Mega"
+  }
+ ],
+ "lines": [
+  {
+   "key": "agumon",
+   "ko": "아구몬",
+   "crest": {
+    "key": "courage",
+    "ko": "용기",
+    "en": "Courage",
+    "color": "#d8661a"
+   },
+   "stages": [
+    {
+     "name": "Botamon",
+     "sprite": "png/agumon/0_baby1_botamon.png"
+    },
+    {
+     "name": "Koromon",
+     "sprite": "png/agumon/1_baby2_koromon.png"
+    },
+    {
+     "name": "Agumon",
+     "sprite": "png/agumon/2_rookie_agumon.png"
+    },
+    {
+     "name": "Greymon",
+     "sprite": "png/agumon/3_champion_greymon.png"
+    },
+    {
+     "name": "MetalGreymon",
+     "sprite": "png/agumon/4_ultimate_metalgreymon.png"
+    },
+    {
+     "name": "WarGreymon",
+     "sprite": "png/agumon/5_mega_wargreymon.png"
+    }
+   ]
+  },
+  {
+   "key": "gabumon",
+   "ko": "파피몬",
+   "crest": {
+    "key": "friendship",
+    "ko": "우정",
+    "en": "Friendship",
+    "color": "#2f5fc0"
+   },
+   "stages": [
+    {
+     "name": "Punimon",
+     "sprite": "png/gabumon/0_baby1_punimon.png"
+    },
+    {
+     "name": "Tsunomon",
+     "sprite": "png/gabumon/1_baby2_tsunomon.png"
+    },
+    {
+     "name": "Gabumon",
+     "sprite": "png/gabumon/2_rookie_gabumon.png"
+    },
+    {
+     "name": "Garurumon",
+     "sprite": "png/gabumon/3_champion_garurumon.png"
+    },
+    {
+     "name": "WereGarurumon",
+     "sprite": "png/gabumon/4_ultimate_weregarurumon.png"
+    },
+    {
+     "name": "MetalGarurumon",
+     "sprite": "png/gabumon/5_mega_metalgarurumon.png"
+    }
+   ]
+  },
+  {
+   "key": "biyomon",
+   "ko": "피요몬",
+   "crest": {
+    "key": "love",
+    "ko": "사랑",
+    "en": "Love",
+    "color": "#c83848"
+   },
+   "stages": [
+    {
+     "name": "Nyokimon",
+     "sprite": "png/biyomon/0_baby1_nyokimon.png"
+    },
+    {
+     "name": "Yokomon",
+     "sprite": "png/biyomon/1_baby2_yokomon.png"
+    },
+    {
+     "name": "Biyomon",
+     "sprite": "png/biyomon/2_rookie_biyomon.png"
+    },
+    {
+     "name": "Birdramon",
+     "sprite": "png/biyomon/3_champion_birdramon.png"
+    },
+    {
+     "name": "Garudamon",
+     "sprite": "png/biyomon/4_ultimate_garudamon.png"
+    },
+    {
+     "name": "Hououmon",
+     "sprite": "png/biyomon/5_mega_hououmon.png"
+    }
+   ]
+  },
+  {
+   "key": "tentomon",
+   "ko": "텐타몬",
+   "crest": {
+    "key": "knowledge",
+    "ko": "지식",
+    "en": "Knowledge",
+    "color": "#7046a8"
+   },
+   "stages": [
+    {
+     "name": "Pabumon",
+     "sprite": "png/tentomon/0_baby1_pabumon.png"
+    },
+    {
+     "name": "Motimon",
+     "sprite": "png/tentomon/1_baby2_motimon.png"
+    },
+    {
+     "name": "Tentomon",
+     "sprite": "png/tentomon/2_rookie_tentomon.png"
+    },
+    {
+     "name": "Kabuterimon",
+     "sprite": "png/tentomon/3_champion_kabuterimon.png"
+    },
+    {
+     "name": "AtlurKabuterimon",
+     "sprite": "png/tentomon/4_ultimate_atlurkabuterimon.png"
+    },
+    {
+     "name": "HerakleKabuterimon",
+     "sprite": "png/tentomon/5_mega_heraklekabuterimon.png"
+    }
+   ]
+  },
+  {
+   "key": "palmon",
+   "ko": "팔몬",
+   "crest": {
+    "key": "purity",
+    "ko": "순수",
+    "en": "Purity",
+    "color": "#3a9a2a"
+   },
+   "stages": [
+    {
+     "name": "Yuramon",
+     "sprite": "png/palmon/0_baby1_yuramon.png"
+    },
+    {
+     "name": "Tanemon",
+     "sprite": "png/palmon/1_baby2_tanemon.png"
+    },
+    {
+     "name": "Palmon",
+     "sprite": "png/palmon/2_rookie_palmon.png"
+    },
+    {
+     "name": "Togemon",
+     "sprite": "png/palmon/3_champion_togemon.png"
+    },
+    {
+     "name": "Lillymon",
+     "sprite": "png/palmon/4_ultimate_lillymon.png"
+    },
+    {
+     "name": "Rosemon",
+     "sprite": "png/palmon/5_mega_rosemon.png"
+    }
+   ]
+  },
+  {
+   "key": "gomamon",
+   "ko": "쉬라몬",
+   "crest": {
+    "key": "sincerity",
+    "ko": "성실",
+    "en": "Sincerity",
+    "color": "#5e6670"
+   },
+   "stages": [
+    {
+     "name": "Pichimon",
+     "sprite": "png/gomamon/0_baby1_pichimon.png"
+    },
+    {
+     "name": "Bukamon",
+     "sprite": "png/gomamon/1_baby2_bukamon.png"
+    },
+    {
+     "name": "Gomamon",
+     "sprite": "png/gomamon/2_rookie_gomamon.png"
+    },
+    {
+     "name": "Ikkakumon",
+     "sprite": "png/gomamon/3_champion_ikkakumon.png"
+    },
+    {
+     "name": "Zudomon",
+     "sprite": "png/gomamon/4_ultimate_zudomon.png"
+    },
+    {
+     "name": "Vikemon",
+     "sprite": "png/gomamon/5_mega_vikemon.png"
+    }
+   ]
+  },
+  {
+   "key": "patamon",
+   "ko": "파닥몬",
+   "crest": {
+    "key": "hope",
+    "ko": "희망",
+    "en": "Hope",
+    "color": "#c09010"
+   },
+   "stages": [
+    {
+     "name": "Poyomon",
+     "sprite": "png/patamon/0_baby1_poyomon.png"
+    },
+    {
+     "name": "Tokomon",
+     "sprite": "png/patamon/1_baby2_tokomon.png"
+    },
+    {
+     "name": "Patamon",
+     "sprite": "png/patamon/2_rookie_patamon.png"
+    },
+    {
+     "name": "Angemon",
+     "sprite": "png/patamon/3_champion_angemon.png"
+    },
+    {
+     "name": "HolyAngemon",
+     "sprite": "png/patamon/4_ultimate_holyangemon.png"
+    },
+    {
+     "name": "Seraphimon",
+     "sprite": "png/patamon/5_mega_seraphimon.png"
+    }
+   ]
+  },
+  {
+   "key": "tailmon",
+   "ko": "가트몬",
+   "crest": {
+    "key": "light",
+    "ko": "빛",
+    "en": "Light",
+    "color": "#c8448c"
+   },
+   "stages": [
+    {
+     "name": "YukimiBotamon",
+     "sprite": "png/tailmon/0_baby1_yukimibotamon.png"
+    },
+    {
+     "name": "Nyaromon",
+     "sprite": "png/tailmon/1_baby2_nyaromon.png"
+    },
+    {
+     "name": "Plotmon",
+     "sprite": "png/tailmon/2_rookie_plotmon.png"
+    },
+    {
+     "name": "Tailmon",
+     "sprite": "png/tailmon/3_champion_tailmon.png"
+    },
+    {
+     "name": "Angewomon",
+     "sprite": "png/tailmon/4_ultimate_angewomon.png"
+    },
+    {
+     "name": "Holydramon",
+     "sprite": "png/tailmon/5_mega_holydramon.png"
+    }
+   ]
+  }
+ ]
+}
+"""#
+}

@@ -2,8 +2,8 @@ import Foundation
 
 /// The eight Digimon Adventure partner lines × six stages (docs/DESIGN.md §1).
 ///
-/// Loaded from `Resources/Tamer/catalog.json`. The file holds names, crest colours and the
-/// sprite pack paths only — the artwork itself is never bundled (DESIGN §5.2).
+/// Source: `Resources/Tamer/catalog.json`, compiled in (see `TamerCatalogData`). It holds names,
+/// crest colours and the sprite pack paths only — the artwork itself is never bundled (DESIGN §5.2).
 struct TamerCatalog: Decodable, Sendable {
     struct Crest: Decodable, Sendable, Equatable {
         let key: String
@@ -47,23 +47,13 @@ struct TamerCatalog: Decodable, Sendable {
         return lang == .ko ? stages[index].ko : stages[index].en
     }
 
+    /// Decoded from `TamerCatalogData` — `catalog.json` compiled in by `scripts/gen-catalog.sh`.
     static let shared: TamerCatalog = {
-        guard let url = resourceURL("catalog", ext: "json"),
-              let data = try? Data(contentsOf: url),
-              let catalog = try? JSONDecoder().decode(TamerCatalog.self, from: data) else {
-            preconditionFailure("Missing or invalid Tamer catalog")
+        guard let catalog = try? JSONDecoder().decode(TamerCatalog.self, from: Data(TamerCatalogData.json.utf8)) else {
+            preconditionFailure("Invalid embedded Tamer catalog")
         }
         return catalog
     }()
-
-    /// The assembled app carries `Tamer/` directly in Contents/Resources; `swift run` uses the
-    /// SwiftPM resource bundle. A missing file in the app returns nil instead of touching
-    /// `Bundle.module`, whose accessor traps when the bundle is absent.
-    static func resourceURL(_ name: String, ext: String, applicationBundle: Bundle = .main) -> URL? {
-        if let url = applicationBundle.url(forResource: name, withExtension: ext, subdirectory: "Tamer") { return url }
-        if applicationBundle.bundleURL.pathExtension == "app" { return nil }
-        return Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "Tamer")
-    }
 }
 
 /// Shop and sprite assets that are not tied to one line.
