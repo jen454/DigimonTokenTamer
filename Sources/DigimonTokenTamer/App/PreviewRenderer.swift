@@ -117,6 +117,16 @@ enum PreviewRenderer {
         popover("22-popover-notebook-pick", .notebook)
         nav.reset()
         popover("21-popover-partner", .partner)
+        shot("17-pet-evolve", width: 640) {
+            let event = TamerEvent.evolve(line: "agumon", from: 2, to: 3)
+            let frames = EvolutionScript.frames(event)
+            HStack(alignment: .bottom, spacing: 10) {
+                ForEach([2, 10, 20, 21, 25], id: \.self) { i in
+                    EvolutionStage(event: event, fit: CGSize(width: 120, height: 120), flashStyle: .glow, still: frames[i])
+                        .background(Color(hex: "#5b6b7a"))
+                }
+            }
+        }
         shot("13-difficulty") { DifficultySection(tamer: tamer) }
         shot("15-motions") {
             let path = "png/agumon/2_rookie_agumon.png"

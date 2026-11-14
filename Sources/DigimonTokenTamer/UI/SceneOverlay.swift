@@ -22,19 +22,7 @@ struct SceneOverlay: View {
     let event: TamerEvent
     let onFinish: () -> Void
 
-    private struct Frame {
-        var who: Who = .current
-        var mode: PixelSprite.Mode = .normal
-        var dx: CGFloat = 0
-        var dy: CGFloat = 0
-        var flash = false
-        var crack = false
-        var sparks = false
-        var duration: Double
-    }
-    private enum Who { case current, next }
-
-    @State private var frame = Frame(duration: 0)
+    @State private var flash = false
     @State private var showTitle = false
     @State private var crestScale: CGFloat = 0.2
 
@@ -52,11 +40,11 @@ struct SceneOverlay: View {
                 Spacer(minLength: 0)
                 Text(tamer.text.tapToClose).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4)).padding(.bottom, 8)
             }
-            if frame.flash { Color.white }
+            if flash { Color.white }
         }
         .contentShape(Rectangle())
         .onTapGesture { onFinish() }
-        .task { await play() }
+        .task { await playCrest() }
     }
 
     // MARK: Content
@@ -67,39 +55,22 @@ struct SceneOverlay: View {
         }
     }
 
-    private var paths: (current: String, next: String)? {
-        guard let line else { return nil }
-        switch event {
-        case .hatch: return (line.eggSprite, line.stages[0].sprite)
-        case .evolve(_, let from, let to): return (line.stages[from].sprite, line.stages[to].sprite)
-        case .crestLit: return nil
-        }
-    }
-
     @ViewBuilder
     private var stageContent: some View {
         if case .crestLit = event, let line {
             PixelSprite(path: line.crestSprite, scale: 4, placeholder: CGSize(width: 96, height: 96))
                 .shadow(color: Color(hex: line.crest.color), radius: 14)
                 .scaleEffect(crestScale)
-        } else if let paths {
-            ZStack(alignment: .bottom) {
-                PixelSprite(path: frame.who == .current ? paths.current : paths.next,
-                            fit: CGSize(width: 230, height: 220), mode: frame.mode,
-                            placeholder: CGSize(width: 90, height: 90))
-                    .offset(x: frame.dx, y: frame.dy)
-                if frame.crack {
-                    Image(systemName: "bolt.fill").font(.system(size: 22)).foregroundStyle(.black.opacity(0.7))
-                        .padding(.bottom, 40)
-                }
-                if frame.sparks {
-                    HStack(spacing: 120) {
-                        PixelIconView(icon: .spark, dot: 4)
-                        PixelIconView(icon: .spark, dot: 4).offset(y: 30)
-                    }
-                    .padding(.bottom, 150)
-                }
-            }
+        } else {
+            EvolutionStage(event: event, fit: CGSize(width: 230, height: 220), flashStyle: .host,
+                           onReveal: { withAnimation(.easeIn(duration: 0.3)) { showTitle = true } },
+                           onFinish: {
+                               Task { @MainActor in
+                                   try? await Task.sleep(for: .seconds(1.4))
+                                   onFinish()
+                               }
+                           },
+                           onFrame: { flash = $0.flash })
         }
     }
 
@@ -124,47 +95,13 @@ struct SceneOverlay: View {
         }
     }
 
-    // MARK: Timeline
+    // MARK: Crest timeline (evolution and hatching run in EvolutionStage)
 
-    private func play() async {
-        if case .crestLit = event {
-            withAnimation(.interpolatingSpring(stiffness: 120, damping: 7)) { crestScale = 1 }
-            withAnimation(.easeIn(duration: 0.3).delay(0.4)) { showTitle = true }
-            try? await Task.sleep(for: .seconds(2.6))
-            if !Task.isCancelled { onFinish() }
-            return
-        }
-        for step in timeline() {
-            frame = step
-            try? await Task.sleep(for: .milliseconds(Int(step.duration * 1000)))
-            if Task.isCancelled { return }
-            if step.sparks, !showTitle { withAnimation(.easeIn(duration: 0.3)) { showTitle = true } }
-        }
-        try? await Task.sleep(for: .seconds(1.4))
+    private func playCrest() async {
+        guard case .crestLit = event else { return }
+        withAnimation(.interpolatingSpring(stiffness: 120, damping: 7)) { crestScale = 1 }
+        withAnimation(.easeIn(duration: 0.3).delay(0.4)) { showTitle = true }
+        try? await Task.sleep(for: .seconds(2.6))
         if !Task.isCancelled { onFinish() }
-    }
-
-    private func timeline() -> [Frame] {
-        let unit: CGFloat = 3
-        var frames: [Frame] = []
-        if case .hatch = event {
-            frames.append(Frame(duration: 0.7))
-            for (i, d) in [300, 260, 220, 180, 150, 120, 100, 90, 80, 70, 60, 60].enumerated() {
-                frames.append(Frame(dx: i % 2 == 0 ? -unit : unit, crack: i > 5, duration: Double(d) / 1000))
-            }
-            frames += [Frame(flash: true, duration: 0.08), Frame(mode: .white, duration: 0.08), Frame(flash: true, duration: 0.08)]
-            frames += [Frame(who: .next, dy: -2 * unit, sparks: true, duration: 0.4), Frame(who: .next, sparks: true, duration: 0.3),
-                       Frame(who: .next, dy: -2 * unit, duration: 0.25), Frame(who: .next, duration: 0.8)]
-            return frames
-        }
-        for k in 0..<8 { frames.append(Frame(dx: k % 2 == 0 ? -unit : unit, duration: 0.08)) }
-        for (i, d) in [340, 280, 220, 170, 130, 100, 80, 65, 55, 50, 45, 45].enumerated() {
-            frames.append(Frame(who: i % 2 == 0 ? .current : .next, mode: .black, duration: Double(d) / 1000))
-        }
-        frames += [Frame(flash: true, duration: 0.07), Frame(who: .next, mode: .white, duration: 0.07),
-                   Frame(flash: true, duration: 0.07), Frame(who: .next, mode: .white, duration: 0.14)]
-        frames += [Frame(who: .next, sparks: true, duration: 0.5), Frame(who: .next, dy: -2 * unit, sparks: true, duration: 0.3),
-                   Frame(who: .next, duration: 0.3), Frame(who: .next, dy: -2 * unit, duration: 0.3), Frame(who: .next, duration: 0.9)]
-        return frames
     }
 }

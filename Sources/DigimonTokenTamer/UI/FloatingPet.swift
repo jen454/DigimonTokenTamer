@@ -170,6 +170,8 @@ struct FloatingPetView: View {
     @Environment(UsageStore.self) private var store
     @Environment(TamerStore.self) private var tamer
     @Environment(SpritePack.self) private var pack
+    /// The hatch/evolution being played on the desktop right now.
+    @State private var playing: TamerEvent?
 
     private var path: String? {
         switch tamer.menuSubject {
@@ -183,7 +185,13 @@ struct FloatingPetView: View {
         let side = CGFloat(store.floatingPetSize)
         ZStack(alignment: .bottom) {
             Ellipse().fill(Color.black.opacity(0.18)).frame(width: side * 0.6, height: 6)
-            if let path {
+            if let playing {
+                // The same sequence as the popover scene, at pet size, with a round glow for the flash.
+                EvolutionStage(event: playing, fit: CGSize(width: side * 1.4, height: side * 1.4), flashStyle: .glow,
+                               onFinish: { self.playing = nil; tamer.perform(.happy) })
+                    .id(tamer.transitionID)
+                    .padding(.bottom, 4)
+            } else if let path {
                 // Nearest whole scale to the chosen size: dots stay square and big forms do not
                 // shrink to 1× just because they are a little over the size.
                 let pixels = pack.sprite(path)?.pixels ?? CGSize(width: side, height: side)
@@ -196,6 +204,11 @@ struct FloatingPetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .onChange(of: tamer.transitionID) { _, _ in
+            // Only a transition that just happened (not one from before the pet was shown).
+            guard let at = tamer.transitionAt, Date().timeIntervalSince(at) < 3, tamer.state.displayForm == nil else { return }
+            playing = tamer.transition
+        }
         .help(tamer.active.map { tamer.name(of: $0) } ?? "")
     }
 }

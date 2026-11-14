@@ -82,6 +82,19 @@ struct GrowthTests {
         #expect(!store.chooseFirstEgg("agumon"))
     }
 
+    @Test func transitionsAreAnnouncedLiveForThePet() {
+        let store = makeStore()
+        store.chooseFirstEgg("agumon")
+        #expect(store.transition == nil)
+        store.credit(TamerBalance.eggHatch, date: "d1")
+        #expect(store.transition == .hatch(line: "agumon"))
+        let id = store.transitionID
+        fill(store)
+        #expect(store.transition == .evolve(line: "agumon", from: 0, to: 1))
+        #expect(store.transitionID == id + 1)
+        #expect(EvolutionScript.paths(.evolve(line: "agumon", from: 0, to: 1), catalog: store.catalog) != nil)
+    }
+
     @Test func eggHatchesIntoInTrainingIAndRegisters() {
         let store = hatchedStore()
         #expect(store.active?.stage == 0)

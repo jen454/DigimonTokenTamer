@@ -404,7 +404,21 @@ final class TamerStore {
         }
     }
 
+    /// The latest hatch/evolution as it happens (not saved). The desktop pet plays it on the spot,
+    /// whether or not the popover is open; the popover plays the queued `pendingEvents` instead.
+    private(set) var transition: TamerEvent?
+    private(set) var transitionID = 0
+    private(set) var transitionAt: Date?
+
     private func enqueue(_ event: TamerEvent) {
+        switch event {
+        case .hatch, .evolve:
+            transition = event
+            transitionAt = Date()
+            transitionID += 1
+        case .crestLit:
+            break
+        }
         state.pendingEvents.append(event)
         // A long absence can queue many steps; the newest ones are the ones worth watching.
         if state.pendingEvents.count > 4 { state.pendingEvents.removeFirst(state.pendingEvents.count - 4) }
