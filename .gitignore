@@ -1,0 +1,8 @@
+# Fan-use assets (Wikimon V-Pet dots, official crest/digitama designs) — never commit; rebuild with tools/build_assets.sh
+/assets/
+.venv/
+__pycache__/
+.DS_Store
+# SwiftPM build output and the assembled app
+/.build/
+/build/
