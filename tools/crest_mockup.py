@@ -4,7 +4,7 @@ V = sys.argv[1]
 man = [e for e in json.load(open(os.path.join(V, "manifest.json"))) if not e["stage"].startswith("x")]
 crests = json.load(open(os.path.join(V, "crests", "crests.json")))
 data = {"man": [{k: e[k] for k in ("line", "stage", "name", "png", "native")} for e in man], "crests": crests}
-HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>문장 UI 목업</title>
+HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>진화 규칙 목업</title>
 <style>
 :root{--bg:#f3f2ee;--card:#fff;--ink:#222;--mute:#8a8a8a;--line:#e4e2dc;--orange:#ff8a00}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font:13px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
@@ -73,12 +73,12 @@ h2{font-size:12px;color:var(--mute);font-weight:600;margin:0 0 8px;letter-spacin
 .dvon{filter:drop-shadow(0 0 3px #7fc8ff)}.dvbuy{animation:dvbuy .9s cubic-bezier(.2,1.6,.4,1)}@keyframes dvbuy{0%{transform:scale(.3) rotate(-20deg);opacity:0}100%{transform:none;opacity:1}}
 .note{color:var(--mute);font-size:12px;line-height:1.6;margin-top:10px}
 </style></head><body>
-<header><h1>문장 UI 목업</h1>
+<header><h1>진화 규칙 목업</h1>
  <div class="seg" id="lines"></div>
 </header>
 <header>
  <div class="seg" id="states"></div>
- <div class="act"><button id="aDv">상점: 디지바이스 구매</button> <button id="aEvo1">성숙기로 진화</button> <button id="aTag">상점: 펜던트 구매</button> <button id="aAch">업적 달성 ▶ 문장 빛남</button> <button id="aEvo">완전체로 진화</button></div>
+ <div class="act"><button id="aDv">상점: 디지바이스 구매</button> <button id="aEvo1">성숙기로 진화</button> <button id="aTag">상점: 펜던트 구매</button> <button id="aAch">업적 달성 ▶ 문장 빛남</button> <button id="aEvo">완전체로 진화</button> <button id="aMeat">고기 10개 주기</button> <button id="aFill">새 토큰으로 게이지 채우기</button> <button id="aMega">궁극체로 진화</button></div>
 </header>
 <main>
  <section>
@@ -86,7 +86,7 @@ h2{font-size:12px;color:var(--mute);font-weight:600;margin:0 0 8px;letter-spacin
   <div class="menubar"><span>🔋</span><div class="mbitem" id="mb"></div><span id="mbtxt">200.7M · 82%</span><span>14:20</span></div>
   <h2>팝오버 · 파트너 카드</h2>
   <div class="pop" id="pop"></div>
-  <p class="note">"!"는 진화할 수 있을 때만 나타납니다. 조건은 카드의 게이지 아래에 항상 보입니다.<br>위 버튼으로 상태를 넘기면 빛남 연출과 펜던트 장착 연출이 재생됩니다.</p>
+  <p class="note">"!"는 진화할 수 있을 때만 나타납니다. 조건은 카드의 게이지 아래에 항상 보입니다.<br>고기 10개는 유대 Lv 0→5를 한 번에 보여주는 시연 버튼입니다. 진화하면 게이지는 0부터 시작합니다.</p>
  </section>
  <section>
   <h2>수첩 (계열별 · 문장 엠블럼)</h2>
@@ -100,7 +100,7 @@ const DATA=__DATA__;
 const LINES=['agumon','gabumon','biyomon','tentomon','palmon','gomamon','patamon','tailmon'];
 const LKO={agumon:'아구몬',gabumon:'파피몬',biyomon:'피요몬',tentomon:'텐타몬',palmon:'팔몬',gomamon:'쉬라몬',patamon:'파닥몬',tailmon:'가트몬'};
 const STK=['유년기 I','유년기 II','성장기','성숙기','완전체','궁극체'];
-const STATES=[['r_no','① 디지바이스 없음'],['r_has','② 디지바이스 · 진화 가능'],['nop','③ 펜던트 없음'],['off','④ 문장 꺼짐'],['lit','⑤ 문장 빛남 · 진화 가능'],['ult','⑥ 완전체']];
+const STATES=[['r_no','① 디지바이스 없음'],['r_has','② 디지바이스 · 진화 가능'],['nop','③ 펜던트 없음'],['off','④ 문장 꺼짐'],['lit','⑤ 문장 빛남 · 진화 가능'],['ult','⑥ 완전체'],['bond','⑦ 유대 Lv 5'],['ready','⑧ 궁극체 진화 가능'],['mega','⑨ 궁극체']];
 const sp=(l,i)=>DATA.man.find(e=>e.line===l&&e.stage[0]===String(i));
 let line='agumon',state='r_no';
 const EXCL=c=>`<svg viewBox="0 0 4 9" shape-rendering="crispEdges"><path fill="${c}" d="M1 0h2v1h1v3h-1v1h-2v-1h-1v-3h1z M1 6h2v1h1v1h-1v1h-2v-1h-1v-1h1z"/><path fill="#5a2c00" opacity=".55" d="M0 1h1v3h-1zM0 7h1v1h-1z"/></svg>`;
@@ -109,13 +109,16 @@ function crest(l){return `crests/${l}.png`;}
 const CR=[24,24],TG=[40,68],DV=[40,38];
 function view(){
  const c=DATA.crests[line];document.documentElement.style.setProperty('--cc',c.color);
- const rookie=state.startsWith('r_'), stageIdx=rookie?2:state==='ult'?4:3, e=sp(line,stageIdx);
- const ready=state==='lit'||state==='r_has';                       // the "!" shows only when evolution is possible
- const has=state!=='nop', lit=state==='lit'||state==='ult';
+ const rookie=state.startsWith('r_'), complete=['ult','bond','ready'].includes(state);
+ const stageIdx=rookie?2:state==='mega'?5:complete?4:3, e=sp(line,stageIdx);
+ const ready=state==='lit'||state==='r_has'||state==='ready'; // "!" only when every condition is met
+ const has=state!=='nop', lit=['lit','ult','bond','ready','mega'].includes(state);
+ const gauge=stageIdx===5?0:stageIdx===4?(state==='ult'?0:state==='bond'?17:100):100;
+ const bond=state==='ult'?0:['bond','ready','mega'].includes(state)?5:0;
  const checks=rookie?[[true,'진화 게이지 100%'],[state==='r_has','디지바이스']]:stageIdx===3
   ?[[true,'진화 게이지 100%'],[has,'펜던트'],[lit,`${c.ko}의 문장`+(lit?'':' (57%)')]]
-  :[[false,'진화 게이지 64%'],[false,'유대 Lv 3 / 5']];
- const next=['','','성숙기','완전체','궁극체'][stageIdx];
+  :stageIdx===4?[[gauge===100,`진화 게이지 ${gauge}%`],[bond===5,`유대 Lv ${bond} / 5`]]:[];
+ const next=stageIdx===5?null:['','','성숙기','완전체','궁극체'][stageIdx];
  // menu bar
  const [w,h]=e.native, s=h<=22?1:22/h;
  document.getElementById('mb').innerHTML=`<div class="spr">${px(e.png,[w,h],s)}</div>
@@ -136,32 +139,41 @@ function view(){
    <div class="t"><b>펜던트 · ${c.ko}의 문장</b>${prog}</div><span class="chip">꺼짐</span>`;
  else if(state==='lit')row=`<div class="ic">${px('items/pendant_'+line+'.png',TG,1,'glow')}</div>
    <div class="t"><b>펜던트 · ${c.ko}의 문장</b><small>문장이 빛나고 있어요</small></div><span class="chip lit">빛남</span>`;
- else row=`<div class="ic">${px('items/pendant_'+line+'.png',TG,1,'glow')}</div>
-   <div class="t"><b>펜던트 · ${c.ko}의 문장</b><small>궁극체까지 유대 Lv 3 / 5 · 고기를 주면 유대가 올라요</small><div class="bar"><i style="width:60%;background:var(--cc)"></i></div></div><span class="chip lit">빛남</span>`;
+ else if(complete)row=`<div class="ic">${px('items/pendant_'+line+'.png',TG,1,'glow')}</div>
+   <div class="t"><b>펜던트 · ${c.ko}의 문장</b><small>궁극체까지 유대 Lv ${bond} / 5 · 고기를 주면 유대가 올라요</small><div class="bar"><i style="width:${bond*20}%;background:var(--cc)"></i></div></div><span class="chip lit">빛남</span>`;
+ else row=`<div class="ic">${px('items/meat.png',[16,16],2)}</div>
+   <div class="t"><b>유대 Lv ${bond}</b><small>게이지가 찰 때마다 유대 레벨이 올라요</small></div><span class="chip lit">궁극체</span>`;
  const hint=state==='r_no'?`<div class="hint">성숙기로 가려면 디지바이스가 필요해요 → <a onclick="doDv()">상점</a></div>`
    :state==='r_has'?`<div class="hint">성숙기로 진화할 수 있어요! 메뉴바의 <b style="color:var(--orange)">!</b>를 눌러 진화시키세요.</div>`
    :state==='nop'?`<div class="hint">완전체로 가려면 펜던트가 필요해요 → <a onclick="doTag()">상점</a></div>`
    :state==='off'?`<div class="hint">펜던트에 문장을 끼웠어요. ${c.ko}의 시련을 마치면 문장이 빛나요.</div>`
-   :state==='lit'?`<div class="hint">완전체로 진화할 수 있어요! 메뉴바의 <b style="color:var(--orange)">!</b>를 눌러 진화시키세요.</div>`:'';
+   :state==='lit'?`<div class="hint">완전체로 진화할 수 있어요! 메뉴바의 <b style="color:var(--orange)">!</b>를 눌러 진화시키세요.</div>`
+   :state==='ult'?`<div class="hint">완전체예요. 고기로 유대를 올리고 새 토큰으로 게이지를 채워요.</div>`
+   :state==='bond'?`<div class="hint">유대 Lv 5 달성! 새로 쓴 토큰으로 진화 게이지를 채워요.</div>`
+   :state==='ready'?`<div class="hint">궁극체로 진화할 수 있어요! 메뉴바의 <b style="color:var(--orange)">!</b>를 눌러 진화시키세요.</div>`
+   :`<div class="hint">궁극체예요. 이제 게이지가 차면 유대 레벨이 올라요.</div>`;
+ const conditions=stageIdx===5?`<div class="checks"><span>궁극체 달성</span><span class="ok">✓ 유대 Lv 5</span></div>`
+  :`<div class="checks"><span>${next}까지</span>${checks.map(([ok,t])=>`<span class="${ok?'ok':'no'}">${ok?'✓':'·'} ${t}</span>`).join('')}</div>`;
  document.getElementById('pop').innerHTML=`
   <div class="stage">${px(e.png,[w,h],sc)}
    ${ready?`<div class="bigbadge" style="left:calc(50% + ${sw/2+4}px);bottom:${10+shh-8}px;width:12px;height:27px">${EXCL('#ff8a00')}</div>`:''}
   </div>
   <div class="nm"><b>${e.name}</b><span>${LKO[line]} 계열 · ${STK[stageIdx]}</span></div>
-  <div class="bar"><i style="width:${stageIdx<4?100:64}%"></i></div>
-  <div class="checks"><span>${next}까지</span>${checks.map(([ok,t])=>`<span class="${ok?'ok':'no'}">${ok?'✓':'·'} ${t}</span>`).join('')}</div>
+  <div class="bar"><i style="width:${gauge}%"></i></div>
+  ${conditions}
   <div class="row" id="crow">${row}</div>${hint}
   <div class="ov" id="ov"><img class="px" src="${crest(line)}"><p>${c.ko}의 문장이 빛났다!</p><small>완전체 진화가 열렸어요</small></div>`;
  if(ready)document.querySelector('.bigbadge').style.animation='bob .6s steps(2) infinite';
  document.getElementById('aDv').disabled=state!=='r_no';document.getElementById('aEvo1').disabled=state!=='r_has';document.getElementById('aTag').disabled=state!=='nop';document.getElementById('aAch').disabled=state!=='off';document.getElementById('aEvo').disabled=state!=='lit';
+ document.getElementById('aMeat').disabled=state!=='ult';document.getElementById('aFill').disabled=state!=='bond';document.getElementById('aMega').disabled=state!=='ready';
  document.querySelectorAll('#states button').forEach(b=>b.classList.toggle('on',b.dataset.k===state));
  document.querySelectorAll('#lines button').forEach(b=>b.classList.toggle('on',b.dataset.k===line));
  notebook();
 }
 function notebook(){
- const reached=state.startsWith('r_')?2:state==='ult'?4:3;
+ const reached=state.startsWith('r_')?2:state==='mega'?5:['ult','bond','ready'].includes(state)?4:3;
  document.getElementById('nb').innerHTML=LINES.map(l=>{
-  const c=DATA.crests[l], mine=l===line, litC=mine&&(state==='lit'||state==='ult');
+  const c=DATA.crests[l], mine=l===line, litC=mine&&['lit','ult','bond','ready','mega'].includes(state);
   const upto=mine?reached:(l==='gabumon'?2:-1);  // pretend gabumon was raised to rookie before
   const cells=[0,1,2,3,4,5].map(i=>{const e=sp(l,i);const known=i<=upto;
     return `<div class="cell ${known?'':'unk'} ${mine&&i===reached?'cur':''}" title="${known?e.name:'???'}"><img class="px" src="${e.png}" style="image-rendering:${e.native[1]>40?'auto':'pixelated'}"></div>`}).join('');
@@ -177,6 +189,9 @@ function doDv(){ if(state!=='r_no')return; state='r_has';view();
  const i=document.querySelector('#crow .ic img');i.classList.add('dvbuy');}
 function doEvo1(){ if(state!=='r_has')return; state='nop';view(); }
 function doEvo(){ if(state!=='lit')return; state='ult';view(); }
+function doMeat(){ if(state!=='ult')return; state='bond';view(); }
+function doFill(){ if(state!=='bond')return; state='ready';view(); }
+function doMega(){ if(state!=='ready')return; state='mega';view(); }
 function doTag(){ if(state!=='nop')return;   // buying the pendant sets the (still unlit) crest into its window
  const pop=document.getElementById('pop'),ic=pop.querySelector('#crow .ic img'),r0=ic.getBoundingClientRect(),pr=pop.getBoundingClientRect();
  ic.classList.remove('off');ic.style.transition='filter .4s';
@@ -186,6 +201,7 @@ function doTag(){ if(state!=='nop')return;   // buying the pendant sets the (sti
  setTimeout(()=>{f.style.left=(r0.left-pr.left+8)+'px';f.style.top=(r0.top-pr.top+29)+'px';f.style.width='24px';f.style.height='24px';},450);
  setTimeout(()=>{state='off';view();},1500);}
 document.getElementById('aDv').onclick=doDv;document.getElementById('aEvo1').onclick=doEvo1;document.getElementById('aAch').onclick=doAch;document.getElementById('aEvo').onclick=doEvo;document.getElementById('aTag').onclick=doTag;
+document.getElementById('aMeat').onclick=doMeat;document.getElementById('aFill').onclick=doFill;document.getElementById('aMega').onclick=doMega;
 document.getElementById('lines').innerHTML=LINES.map(l=>`<button data-k="${l}">${px(crest(l),CR,0.75)}${LKO[l]}</button>`).join('');
 document.getElementById('states').innerHTML=STATES.map(([k,t])=>`<button data-k="${k}">${t}</button>`).join('');
 document.querySelectorAll('#lines button').forEach(b=>b.onclick=()=>{line=b.dataset.k;view();});

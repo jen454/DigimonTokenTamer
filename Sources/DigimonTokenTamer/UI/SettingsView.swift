@@ -113,10 +113,6 @@ struct SettingsView: View {
         HStack(spacing: 5) {
             Text("v\(Self.appVersion)")
             Text("·")
-            footerLink("DigiMonTokenBar", "https://github.com/Choisiz/DigiMonTokenBar")
-            Text("·")
-            footerLink("PokeTokenBar", "https://github.com/chattymin/PokeTokenBar")
-            Text("·")
             Text(t.notice).lineLimit(1).minimumScaleFactor(0.8)
             Spacer()
         }
@@ -774,17 +770,6 @@ struct SettingsView: View {
             Spacer()
             Toggle(label, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
         }
-    }
-
-    /// 푸터 링크 — 버전 표기와 동일한 크기·색을 상속하고 밑줄로만 구분.
-    private func footerLink(_ title: String, _ urlString: String) -> some View {
-        Button {
-            if let url = URL(string: urlString) { NSWorkspace.shared.open(url) }
-        } label: {
-            Text(title).underline()
-        }
-        .buttonStyle(.plain)
-        .help(urlString)
     }
 
     private func commitCustomScanDraft() {

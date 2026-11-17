@@ -4,17 +4,19 @@
 
 디지몬 토큰 테이머: AI 코딩 도구에 쓴 토큰으로 디지몬 어드벤처 파트너 8계열을 키우는 macOS 메뉴바 앱입니다.
 
+PokeTokenBar에서 포켓몬이 토큰 사용량에 따라 성장하는 모습을 보고, 디지몬 파트너를 키우는 앱을 떠올렸습니다.
+
 > 비공식 팬 프로젝트이며 Bandai/Toei와 관련이 없습니다. 자세한 고지는 [NOTICE.md](NOTICE.md)를 보세요.
 
 - 설계 전체: [docs/DESIGN.md](docs/DESIGN.md)
-- 코드 베이스: [DigiMonTokenBar](https://github.com/Choisiz/DigiMonTokenBar) (← [PokeTokenBar](https://github.com/chattymin/PokeTokenBar)), MIT
+- 코드 원저작권 고지: [NOTICE.md](NOTICE.md), [LICENSE](LICENSE)
 
 ## 무엇이 들어 있나
 
 | 영역 | 내용 |
 |---|---|
 | 메뉴바 | 파트너 도트(정수 배율, 보간 없음)와 오늘 토큰을 표시합니다. 한도 %는 설정에서 켤 수 있습니다. 진화할 수 있을 때만 주황색 "!"가 통통 튑니다. |
-| 파트너 카드 | 왼쪽 캐릭터 상자, 오른쪽 프로필(형·속성, 그 오른쪽에 필살기)과 진화 게이지 (DigiTokenBar 홈 카드 방식). 아래는 조건 줄 → 장비/문장 줄 → 힌트 (목업 `crest-mockup.html`). |
+| 파트너 카드 | 왼쪽 캐릭터 상자, 오른쪽 프로필(형·속성, 그 오른쪽에 필살기)과 진화 게이지를 보여 줍니다. 아래는 조건 줄 → 장비/문장 줄 → 힌트 (목업 `crest-mockup.html`). |
 | 동작 | 평소엔 걷고, 클릭하면 하트(너무 많이 누르면 짜증), 진화할 수 있으면 점프하며 "!", 토큰 갱신이 안 되면 잠듭니다. 고기를 주면 먹고, 진화 후엔 기뻐합니다. |
 | 진화 | 게이지 아래에 토큰 양이 보이고, 진화하면 게이지는 0부터 다시 찹니다. 유년기 I → II → 성장기는 자동입니다. 성장기 → 성숙기는 **디지바이스**, 성숙기 → 완전체는 **펜던트 + 빛나는 문장**, 완전체 → 궁극체는 **유대 레벨**이 필요하고, 모두 "!"를 눌러 시작합니다. |
 | 연출 | 부화, 진화(실루엣 깜빡임 → 흰 섬광), 문장 빛남, 디지바이스 획득, 펜던트 장착, 고기 먹기 |
@@ -24,7 +26,7 @@
 | 난이도 | PokeTokenBar처럼 성장(게이지 크기)과 상점 가격 배율을 10%~200%로 조절합니다. |
 | 노트북 | 계열별 한 줄에 문장 엠블럼과 6단계 칸이 있고, 못 본 형태는 실루엣입니다. 누르면 **아날라이저**(정보, 필살기, 진화 루트, 공식 도감 링크, 메뉴바에 띄우기)가 열립니다. 메뉴바 형태도 여기서 고릅니다. |
 | 이름 | 디지몬 이름은 공식 한국어 이름(어드벤처 현지화명: 깜몬, 가루몬, 원뿔몬 …)으로 보입니다. |
-| 사용량 | DigiMonTokenBar의 로컬 로그 수집(Claude Code, Codex 외)과 공식 한도 조회를 그대로 씁니다. DATA TRAFFIC은 **전체 서비스 · 상세 기록**만 남겼고, 그 안의 AI 툴 탭을 누르면 해당 툴의 입력·출력·캐시와 한도가 보입니다. |
+| 사용량 | Claude Code, Codex 등의 로컬 로그에서 토큰 사용량을 읽고 공식 한도를 조회합니다. DATA TRAFFIC의 **전체 서비스 · 상세 기록**에서 AI 툴 탭을 누르면 해당 툴의 입력·출력·캐시와 한도가 보입니다. |
 
 ## 다운로드·설치
 
@@ -88,8 +90,8 @@ Sources/DigimonTokenTamer/
   App/       메뉴바·팝오버 (AppDelegate), 미리보기 렌더러
   Tamer/     육성 게임: 카탈로그, 밸런스, 토큰 장부, 상태, 스프라이트 팩, 메뉴바 프레임
   UI/        파트너 카드, 연출, 상점, 가방, 노트북, 설정, 테마
-  Usage/     DigiMonTokenBar 사용량 파이프라인 (로그 파서, 캐시, 한도, UsageStore)
-  UsageUI/   상세 기록 패널, 한도 패널, 월간 추이 (DigiMonTokenBar에서 이식)
+  Usage/     사용량 파이프라인 (로그 파서, 캐시, 한도, UsageStore)
+  UsageUI/   상세 기록 패널, 한도 패널, 월간 추이
   Resources/Tamer/catalog.json   8계열 × 6단계 이름·문장·스프라이트 경로 (이미지 없음, 빌드 시 Swift 소스로 포함)
 Tests/DigimonTokenTamerTests/    토큰 장부, 진화 조건, 상점, 저장
 tools/     에셋 생성 스크립트 (Python)
@@ -98,7 +100,7 @@ scripts/   앱 빌드, 스프라이트 설치, 테스트
 
 ### 밸런스
 
-모든 수치는 `Sources/DigimonTokenTamer/Tamer/TamerBalance.swift` 한 곳에 있습니다. 현재 값은 DigiMonTokenBar의 기준(하루 평균 약 253M 토큰, 일반 라인 졸업 750M)에서 잡은 1차 값이며 [DESIGN.md §2.6](docs/DESIGN.md)에 정리되어 있습니다.
+모든 수치는 `Sources/DigimonTokenTamer/Tamer/TamerBalance.swift` 한 곳에 있습니다. 현재 밸런스 값과 조정 기준은 [DESIGN.md §2.6](docs/DESIGN.md)에 정리되어 있습니다.
 
 ## 저작권
 
